@@ -1,1 +1,1 @@
-Allegro3d and OpenGL wrapper classes
+Allegro5 and OpenGL wrapper classes
