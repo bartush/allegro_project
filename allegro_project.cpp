@@ -50,6 +50,10 @@ void allegro_project::init(int display_flags)
   // Set display flags
   al_set_new_display_flags(display_flags);
     
+  // Enable antialiasing
+  al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 2, ALLEGRO_SUGGEST);
+  al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
+
   // Init Addons
   if (!al_init_primitives_addon()) 
     throw "couldn't init primitives addon!";
@@ -96,7 +100,7 @@ bool allegro_project::init_fps_timer(double speed_sec)
     al_destroy_timer(_fps);
   _fps = al_create_timer(speed_sec);
   if (!_fps) return false;
-
+  
   al_register_event_source(_event_queue, al_get_timer_event_source(_fps));
   return true;
 }
@@ -153,52 +157,45 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
   return _system_font;
 }
 
-
 // allegro_opengl_project implementation ////////////////////////////////
 
 void allegro_opengl_project::pre_render() 
 {
-  //al_clear_to_color(al_map_rgb(0,0,255*0.2));
-  glPushMatrix();
-  GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
-  GLfloat light_position[] = {1.0, 1.0, 1.0, 1.0};
-  glLightfv(GL_LIGHT0, GL_AMBIENT, light_diffuse);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, light_diffuse);
-  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-  glEnable(GL_LIGHTING); 
-  glEnable(GL_LIGHT0);
+
+  glPushMatrix(); // save 2d world matrix
+  enable_global_lighting();
+
   glClearColor(0.0, 0.0, 0.2, 1);
-  glClear(GL_COLOR_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
-  glClear(GL_DEPTH_BUFFER_BIT);	
-  glShadeModel(GL_SMOOTH);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluPerspective(45, 1, 0.01, 20); // init perspective view
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  gluLookAt(0, 0, 10,
+	    0, 0, 0, 
+	    0, 1, 0 ); 
+
+  camera_transform.scale(1.7, 1.7, 1.7);
+  camera_transform.rotate(1, 1, 1);
+  camera_transform.apply();
 }
 
 void allegro_opengl_project::render()
 {
-  // Init perspective view ///////////
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(45, 1, 0.1, 20);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  ////////////////////////////////////
+  glShadeModel(GL_SMOOTH);
+  glEnable(GL_ALPHA_TEST);
 
-  gluLookAt( 0, 0, 10, 0, 0, 0, 0, 1, 0 );  
-  glPushMatrix();
-  glScalef(1.8, 1.8, 1.8);
-
-  /////////////////////////////////////////////
-
-  GLfloat n[6][3] = {  /* Normals for the 6 faces of a cube. */
+  GLfloat n[6][3] = {    // normals for the 6 faces of a cube
     {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
     {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0} };
-  GLint faces[6][4] = {  /* Vertex indices for the 6 faces of a cube. */
+  GLint faces[6][4] = {  // vertex indices for the 6 faces of a cube
     {0, 1, 2, 3}, {3, 2, 6, 7}, {7, 6, 5, 4},
     {4, 5, 1, 0}, {5, 6, 2, 1}, {7, 4, 0, 3} };
   GLfloat v[8][3];
-  /* Setup cube vertex data. */
+  
   v[0][0] = v[1][0] = v[2][0] = v[3][0] = -1;
   v[4][0] = v[5][0] = v[6][0] = v[7][0] = 1;
   v[0][1] = v[1][1] = v[4][1] = v[5][1] = -1;
@@ -206,8 +203,12 @@ void allegro_opengl_project::render()
   v[0][2] = v[3][2] = v[4][2] = v[7][2] = 1;
   v[1][2] = v[2][2] = v[5][2] = v[6][2] = -1; 
     
-  GLfloat red[]={1, 0, 0, 1.0};
-  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, red);
+  GLfloat red_dif[]={0.9,  0.0, 0.0, 1.0};
+  GLfloat red_amb[]={0.4,  0.0, 0.0, 1.0};
+  GLfloat red_spe[]={0.0,  0.0, 0.0, 1.0};
+  glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, red_dif);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, red_amb);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, red_spe);
   for (int i = 0; i < 6; i++) 
     {
       glBegin(GL_QUADS);
@@ -218,18 +219,98 @@ void allegro_opengl_project::render()
       glVertex3fv(&v[faces[i][3]][0]);
       glEnd();
     }
-
-  //////////////////////////////////////////////
-  glPopMatrix();
 }
 
 void allegro_opengl_project::post_render() 
 {
+  disable_global_lighting();
+
+  glDisable(GL_DEPTH_TEST);
+  glPopMatrix(); // come back to 2d allegro world  
+  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), _w/2, _h/2,  
+		ALLEGRO_ALIGN_CENTER, "%s", "TEST");
+}
+
+void allegro_opengl_project::enable_global_lighting()
+{
+  GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};
+  GLfloat light_position[] = {10.0, 10.0, 10.0, 1.0};
+  glLightfv(GL_LIGHT0, GL_AMBIENT, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+  
+  glEnable(GL_LIGHT0);
+  glEnable(GL_LIGHTING); 
+}
+
+void allegro_opengl_project::disable_global_lighting()
+{
   glDisable(GL_LIGHT0);
   glDisable(GL_LIGHTING);
-  glDisable(GL_DEPTH_TEST);
-  glPopMatrix();
-  
-  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), _w/2, _h/2,  
-  	       ALLEGRO_ALIGN_CENTER, "%s", "TEST");
 }
+
+//  allegro_opengl_project::transform implementation ///////////////////////////
+
+void allegro_opengl_project::transform::reset()
+{
+  _xs = 1;
+  _ys = 1;
+  _zs = 1;
+  _xa = 0;
+  _ya = 0;
+  _za = 0;
+  _x = 0;
+  _y = 0;
+  _z = 0;
+  _changed_scale = true;
+  _changed_rotation = true;
+  _changed_translation = true;
+}
+void allegro_opengl_project::transform::scale(double dxs, double dys, double dzs)
+{
+  _xs = dxs;
+  _ys = dys;
+  _zs = dzs;
+  _changed_scale = true;
+}
+void allegro_opengl_project::transform::rotate(double dxa, double dya, double dza)
+{
+  _xa += dxa;
+  _ya += dya;
+  _za += dza;
+  if (_xa >= 360) _xa -= 360;
+  if (_ya >= 360) _ya -= 360;
+  if (_za >= 360) _za -= 360;  
+  _changed_rotation = true;
+} 
+void allegro_opengl_project::transform::translate(double dx, double dy, double dz)
+{
+  _x += dx;
+  _y += dy;
+  _z += dz;
+  _changed_translation = true;
+}
+void allegro_opengl_project::transform::apply()
+{
+  if (_changed_scale) 
+      glScaled(_xs, _ys, _zs);
+
+  if (_changed_rotation)
+    {
+      glRotated(_xa, 1, 0, 0);
+      glRotated(_ya, 0, 1, 0);
+      glRotated(_za, 0, 0, 1);
+    }
+
+  if (_changed_translation)
+      glTranslated(_x, _y, _z); 
+
+  _changed_scale = false;
+  _changed_rotation = false;
+  _changed_translation = false;  
+}
+
+double allegro_opengl_project::transform::get_x() { return _x; }
+double allegro_opengl_project::transform::get_y() { return _y; }
+double allegro_opengl_project::transform::get_z() { return _z; }

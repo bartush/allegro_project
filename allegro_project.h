@@ -12,7 +12,6 @@
 class allegro_project
 {
 public: 
-
   allegro_project();
   virtual ~allegro_project();
   virtual void init(int display_flags);
@@ -25,7 +24,6 @@ public:
   const ALLEGRO_FONT* get_system_font();
 
 protected:
-
   ALLEGRO_EVENT_QUEUE* _event_queue   = nullptr;
   ALLEGRO_DISPLAY*     _display       = nullptr;
   ALLEGRO_TIMER*       _fps           = nullptr;
@@ -37,8 +35,40 @@ protected:
 class allegro_opengl_project : public allegro_project
 {
 public:
+  virtual void pre_render() override;
+  virtual void render() override;
+  virtual void post_render() override;
 
-  void pre_render() override;
-  void render() override;
-  void post_render() override;
+  class transform
+  {
+    friend allegro_opengl_project;
+  public:
+    void reset();
+    void scale(double dxs, double dxy, double dxz);
+    void rotate(double dxa, double dya, double dza);
+    void translate(double dx, double dy, double dz);
+    void apply();
+
+    double get_x();
+    double get_y();
+    double get_z();
+  protected:
+    double _x  = 0;
+    double _y  = 0;
+    double _z  = 0;  
+    double _xa = 0;
+    double _ya = 0;
+    double _za = 0;
+    double _xs = 1;
+    double _ys = 1;
+    double _zs = 1;
+    bool _changed_translation = false;
+    bool _changed_rotation    = false;
+    bool _changed_scale       = false;
+  };
+
+protected:
+  transform camera_transform;
+  virtual void enable_global_lighting();
+  virtual void disable_global_lighting();
 };
