@@ -65,10 +65,13 @@ void allegro_project::init(int display_flags)
   _system_font = al_create_builtin_font();
   if (!_system_font) 
     throw "system font is not initialized!";
+
+  _init = true;
 }
 
 void allegro_project::create_display(int w, int h)
 {
+  if (!_init) throw "Allegro project is not initialized!";
   if (!_event_queue || _display)
     throw "event queue is not initialised or display is already created!";
 
@@ -107,6 +110,7 @@ bool allegro_project::init_fps_timer(double speed_sec)
 
 void allegro_project::main_loop()
 {
+  if (!_init) throw "Allegro openGL project is not initialized!";
   if (!_event_queue) return;
   ALLEGRO_EVENT ev;
   bool drawing_enabled = false;
@@ -159,35 +163,34 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
 
 // allegro_opengl_project implementation ////////////////////////////////
 
+void allegro_opengl_project::init(int display_flags)
+{
+  allegro_project::init(display_flags);
+  _camera.init(35, 1, 100);
+  _camera.translate(0, 0, -100);
+}
+
 void allegro_opengl_project::pre_render() 
 {
-
   glPushMatrix(); // save 2d world matrix
-  enable_global_lighting();
 
   glClearColor(0.0, 0.0, 0.2, 1);
   glEnable(GL_DEPTH_TEST);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);	
+  glShadeModel(GL_SMOOTH);
+  glEnable(GL_ALPHA_TEST);
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(45, 1, 0.01, 20); // init perspective view
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  gluLookAt(0, 0, 10,
-	    0, 0, 0, 
-	    0, 1, 0 ); 
+  enable_global_lighting();
 
-  camera_transform.scale(1.7, 1.7, 1.7);
-  camera_transform.rotate(1, 1, 1);
-  camera_transform.apply();
+  if (_camera.get_z() > -2) _camera.translate(0,0,-100);
+  _camera.update();
+  _camera.translate(0, 0, 0.5);
+  _camera.rotate(1, 1, 1);
+
 }
 
 void allegro_opengl_project::render()
 {
-  glShadeModel(GL_SMOOTH);
-  glEnable(GL_ALPHA_TEST);
-
   GLfloat n[6][3] = {    // normals for the 6 faces of a cube
     {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
     {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0} };
@@ -241,7 +244,7 @@ void allegro_opengl_project::enable_global_lighting()
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
   
   glEnable(GL_LIGHT0);
-  glEnable(GL_LIGHTING); 
+  glEnable(GL_LIGHTING);
 }
 
 void allegro_opengl_project::disable_global_lighting()
@@ -250,10 +253,19 @@ void allegro_opengl_project::disable_global_lighting()
   glDisable(GL_LIGHTING);
 }
 
-//  allegro_opengl_project::transform implementation ///////////////////////////
+//  allegro_opengl_project::transformation implementation ///////////////////////////
 
-void allegro_opengl_project::transform::reset()
+void allegro_opengl_project::camera_frame::init(double fov, double znear, double zfar, double aspect)
 {
+  _fov = fov;
+  _znear = znear;
+  _zfar = zfar;
+  _aspect = aspect;
+  _init = true;
+}
+void allegro_opengl_project::camera_frame::reset()
+{
+  if (!_init) return;
   _xs = 1;
   _ys = 1;
   _zs = 1;
@@ -267,34 +279,36 @@ void allegro_opengl_project::transform::reset()
   _changed_rotation = true;
   _changed_translation = true;
 }
-void allegro_opengl_project::transform::scale(double dxs, double dys, double dzs)
+void allegro_opengl_project::camera_frame::scale(double xs, double ys, double zs, bool absolute)
 {
-  _xs = dxs;
-  _ys = dys;
-  _zs = dzs;
+  _xs = (absolute ? 0 : _xs) + xs;
+  _ys = (absolute ? 0 : _ys) + ys;
+  _zs = (absolute ? 0 : _zs) + zs;
   _changed_scale = true;
 }
-void allegro_opengl_project::transform::rotate(double dxa, double dya, double dza)
+void allegro_opengl_project::camera_frame::rotate(double xa, double ya, double za, bool absolute)
 {
-  _xa += dxa;
-  _ya += dya;
-  _za += dza;
+  _xa = (absolute ? 0 : _xa) + xa;
+  _ya = (absolute ? 0 : _ya) + ya;
+  _za = (absolute ? 0 : _za) + za;
   if (_xa >= 360) _xa -= 360;
   if (_ya >= 360) _ya -= 360;
   if (_za >= 360) _za -= 360;  
   _changed_rotation = true;
 } 
-void allegro_opengl_project::transform::translate(double dx, double dy, double dz)
+void allegro_opengl_project::camera_frame::translate(double x, double y, double z, bool absolute)
 {
-  _x += dx;
-  _y += dy;
-  _z += dz;
+  _x = (absolute ? 0 : _x) + x;
+  _y = (absolute ? 0 : _y) + y;
+  _z = (absolute ? 0 : _z) + z;
   _changed_translation = true;
 }
-void allegro_opengl_project::transform::apply()
+void allegro_opengl_project::camera_frame::apply()
 {
-  if (_changed_scale) 
-      glScaled(_xs, _ys, _zs);
+  if (!_init) throw "camera is not initialized";
+
+  if (_changed_translation)
+    glTranslated(_x, _y, _z); 
 
   if (_changed_rotation)
     {
@@ -303,14 +317,36 @@ void allegro_opengl_project::transform::apply()
       glRotated(_za, 0, 0, 1);
     }
 
-  if (_changed_translation)
-      glTranslated(_x, _y, _z); 
+  if (_changed_scale) 
+      glScaled(_xs, _ys, _zs);
 
   _changed_scale = false;
   _changed_rotation = false;
   _changed_translation = false;  
 }
+void allegro_opengl_project::camera_frame::update()
+{
+  if (!_init) throw "camera is not initialized";
 
-double allegro_opengl_project::transform::get_x() { return _x; }
-double allegro_opengl_project::transform::get_y() { return _y; }
-double allegro_opengl_project::transform::get_z() { return _z; }
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glFrustum(-0.5, 0.5, -0.5, 0.5, _znear, _zfar);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+
+  glTranslated(_x, _y, _z); 
+
+  glRotated(_xa, 1, 0, 0);
+  glRotated(_ya, 0, 1, 0);
+  glRotated(_za, 0, 0, 1);
+
+  glScaled(_xs, _ys, _zs);
+  _changed_scale = false;
+  _changed_rotation = false;
+  _changed_translation = false;
+}
+
+double allegro_opengl_project::camera_frame::get_x() { return _x; }
+double allegro_opengl_project::camera_frame::get_y() { return _y; }
+double allegro_opengl_project::camera_frame::get_z() { return _z; }

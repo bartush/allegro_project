@@ -8,7 +8,7 @@ SRC=allegro_project.cpp test.cpp
 all:
 	g++ -g $(SRC) -o test $(CPPFLAGS)
 	make run
-	make clean
+#	make clean
 run:
 	./test
 
