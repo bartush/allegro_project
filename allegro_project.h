@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <algorithm>
 
 #include <allegro5/allegro5.h>
@@ -19,17 +20,22 @@ public:
   virtual void render();
   virtual void post_render();
   virtual bool init_fps_timer(double speed_sec = 1.0/24.0);
+  virtual void keyboard_event_handler(const ALLEGRO_EVENT& ev);
+  virtual void check_keyboard_state();
+  virtual void check_mouse_state();
   virtual void main_loop(); 
   const ALLEGRO_FONT* get_system_font();
 
 protected:
-  bool                 _init          = false;
-  ALLEGRO_EVENT_QUEUE* _event_queue   = nullptr;
-  ALLEGRO_DISPLAY*     _display       = nullptr;
-  ALLEGRO_TIMER*       _fps           = nullptr;
-  ALLEGRO_FONT*        _system_font   = nullptr;
-  int                  _w             = 0;
-  int                  _h             = 0;
+  ALLEGRO_KEYBOARD_STATE _keyboard_state;
+  ALLEGRO_MOUSE_STATE    _mouse_state;
+  bool                   _init          = false;
+  ALLEGRO_EVENT_QUEUE*   _event_queue   = nullptr;
+  ALLEGRO_DISPLAY*       _display       = nullptr;
+  ALLEGRO_TIMER*         _fps           = nullptr;
+  ALLEGRO_FONT*          _system_font   = nullptr;
+  int                    _w             = 0;
+  int                    _h             = 0;
 };
 
 class allegro_opengl_project : public allegro_project
@@ -39,17 +45,21 @@ public:
   virtual void pre_render() override;
   virtual void render() override;
   virtual void post_render() override;
+  virtual void check_keyboard_state();
+  virtual void check_mouse_state();
 
   class camera_frame
   {
   public:
-    void init(double fov, double znear, double zfar, double aspect = 1);
+    void init_projection(double fov = 45, double znear = 1, double zfar = 10, double aspect = 1);
     void reset();
+    void reset_projection();
     void scale(double dxs, double dxy, double dxz, bool absolute = false);
     void rotate(double dxa, double dya, double dza, bool absolute = false);
     void translate(double dx, double dy, double dz, bool absolute = false);
     void apply();
     void update();
+
 
     double get_x();
     double get_y();
@@ -57,7 +67,6 @@ public:
 
   protected:
     bool _init = false;
-    //const allegro_opengl_project* algl = nullptr;
 
     double _x  = 0;
     double _y  = 0;
@@ -71,10 +80,10 @@ public:
     bool _changed_translation = false;
     bool _changed_rotation    = false;
     bool _changed_scale       = false;
-
-    double _fov = 35;
-    double _znear = 0;
-    double _zfar = 10;
+    
+    double _fov    = 45;
+    double _znear  = 0;
+    double _zfar   = 10;
     double _aspect = 1;
   };
 
@@ -84,3 +93,10 @@ protected:
   virtual void enable_global_lighting();
   virtual void disable_global_lighting();
 };
+
+// utility macros
+ 
+#define BEGIN_EXCEPTION_CATCH()  try {
+
+#define END_EXCEPTION_CATCH() } catch(const char* ex) \
+				  { std::cout << "exception: " << ex << std::endl; }

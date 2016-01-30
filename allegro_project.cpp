@@ -1,5 +1,6 @@
 #include "allegro_project.h"
 
+
 allegro_project::allegro_project() {}
 
 allegro_project::~allegro_project() 
@@ -30,6 +31,7 @@ allegro_project::~allegro_project()
 
 void allegro_project::init(int display_flags)
 {
+  BEGIN_EXCEPTION_CATCH()
   // Basic initialization
   if (!al_init()) 
     throw "couldn't init allegro!";
@@ -45,7 +47,10 @@ void allegro_project::init(int display_flags)
   if(!al_install_keyboard()) 
     throw "couldn't install keyboard!";
   al_register_event_source(_event_queue, al_get_keyboard_event_source());
-  
+
+  if(!al_install_mouse())
+    throw "could't install keyboard!";
+  al_register_event_source(_event_queue, al_get_mouse_event_source());
 	  
   // Set display flags
   al_set_new_display_flags(display_flags);
@@ -67,10 +72,12 @@ void allegro_project::init(int display_flags)
     throw "system font is not initialized!";
 
   _init = true;
+  END_EXCEPTION_CATCH();
 }
 
 void allegro_project::create_display(int w, int h)
 {
+  BEGIN_EXCEPTION_CATCH()
   if (!_init) throw "Allegro project is not initialized!";
   if (!_event_queue || _display)
     throw "event queue is not initialised or display is already created!";
@@ -82,6 +89,7 @@ void allegro_project::create_display(int w, int h)
   al_register_event_source(_event_queue, al_get_display_event_source(_display));
   _w = w;
   _h = h;
+  END_EXCEPTION_CATCH()
 }
 
 void allegro_project::pre_render() {}
@@ -108,8 +116,28 @@ bool allegro_project::init_fps_timer(double speed_sec)
   return true;
 }
 
+void allegro_project::keyboard_event_handler(const ALLEGRO_EVENT& ev)
+{
+  if (ev.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
+    {
+      throw "ESC pressed!";
+      return;
+    }
+}
+
+void allegro_project::check_keyboard_state() 
+{
+  al_get_keyboard_state(&_keyboard_state);
+}
+
+void allegro_project::check_mouse_state() 
+{
+  al_get_mouse_state(&_mouse_state);
+}
+
 void allegro_project::main_loop()
 {
+  BEGIN_EXCEPTION_CATCH()
   if (!_init) throw "Allegro openGL project is not initialized!";
   if (!_event_queue) return;
   ALLEGRO_EVENT ev;
@@ -129,8 +157,7 @@ void allegro_project::main_loop()
 	  }
 	case ALLEGRO_EVENT_KEY_DOWN:
 	  {
-	    if (ev.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
-	      return;
+	    keyboard_event_handler(ev);
 	    break;
 	  }
 	case ALLEGRO_EVENT_DISPLAY_RESIZE:
@@ -148,12 +175,15 @@ void allegro_project::main_loop()
       if (drawing_enabled && al_event_queue_is_empty(_event_queue))
 	{	
 	  drawing_enabled = false;
+	  check_keyboard_state();
+	  check_mouse_state();
 	  pre_render();
 	  render();
 	  post_render();
 	  al_flip_display();
 	}
     }
+  END_EXCEPTION_CATCH()
 }
 
 const ALLEGRO_FONT* allegro_project::get_system_font()
@@ -166,8 +196,51 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
 void allegro_opengl_project::init(int display_flags)
 {
   allegro_project::init(display_flags);
-  _camera.init(35, 1, 100);
-  _camera.translate(0, 0, -100);
+  _camera.init_projection(45, 1, 100);
+  _camera.translate(0, 0, -10);
+}
+
+void allegro_opengl_project::check_keyboard_state()
+{
+  allegro_project::check_keyboard_state();
+
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_R))
+    {
+      _camera.reset();
+      _camera.translate(0, 0, -10);
+    }
+  
+
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
+    _camera.rotate(-1, 0, 0);
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
+    _camera.rotate(+1, 0, 0);
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_LEFT))
+    _camera.rotate(0, -1, 0);
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
+    _camera.rotate(0, +1, 0);
+
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RSHIFT) || al_key_down(&_keyboard_state, ALLEGRO_KEY_LSHIFT))
+    {
+      if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
+	_camera.translate(0, +0.2, 0);
+      if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
+	_camera.translate(0, -0.2, 0);
+      if (al_key_down(&_keyboard_state, ALLEGRO_KEY_LEFT))
+	_camera.translate(-0.2, 0, 0);
+      if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
+	_camera.translate(+0.2, 0, 0);
+    }
+
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
+    _camera.translate(0, 0, -0.2);
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_EQUALS))
+    _camera.translate(0, 0, +0.2);
+}
+
+void allegro_opengl_project::check_mouse_state() 
+{
+  allegro_project::check_mouse_state();
 }
 
 void allegro_opengl_project::pre_render() 
@@ -182,11 +255,10 @@ void allegro_opengl_project::pre_render()
 
   enable_global_lighting();
 
-  if (_camera.get_z() > -2) _camera.translate(0,0,-100);
-  _camera.update();
-  _camera.translate(0, 0, 0.5);
-  _camera.rotate(1, 1, 1);
+  if (_mouse_state.buttons & 1) 
+      _camera.rotate(0, +1, 0);
 
+  _camera.update();
 }
 
 void allegro_opengl_project::render()
@@ -230,8 +302,14 @@ void allegro_opengl_project::post_render()
 
   glDisable(GL_DEPTH_TEST);
   glPopMatrix(); // come back to 2d allegro world  
-  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), _w/2, _h/2,  
-		ALLEGRO_ALIGN_CENTER, "%s", "TEST");
+
+  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 35,  
+		ALLEGRO_ALIGN_LEFT, "%s", "Use arrow keys to rotate model");
+  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 25,  
+		ALLEGRO_ALIGN_LEFT, "%s", "\"+/-\" to zoom in/out");
+  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 15,  
+		ALLEGRO_ALIGN_LEFT, "%s", "\"r\" to reset");
+
 }
 
 void allegro_opengl_project::enable_global_lighting()
@@ -255,7 +333,7 @@ void allegro_opengl_project::disable_global_lighting()
 
 //  allegro_opengl_project::transformation implementation ///////////////////////////
 
-void allegro_opengl_project::camera_frame::init(double fov, double znear, double zfar, double aspect)
+void allegro_opengl_project::camera_frame::init_projection(double fov, double znear, double zfar, double aspect)
 {
   _fov = fov;
   _znear = znear;
@@ -278,6 +356,19 @@ void allegro_opengl_project::camera_frame::reset()
   _changed_scale = true;
   _changed_rotation = true;
   _changed_translation = true;
+}
+void allegro_opengl_project::camera_frame::reset_projection()
+{
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  double w,h;
+  const double pi = std::acos(-1);
+  h = 2 * _znear * std::tan(_fov*pi/(2*180));
+  w = h * _aspect;
+  glFrustum(-w/2, w/2, -h/2, h/2, _znear, _zfar);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
 }
 void allegro_opengl_project::camera_frame::scale(double xs, double ys, double zs, bool absolute)
 {
@@ -307,6 +398,8 @@ void allegro_opengl_project::camera_frame::apply()
 {
   if (!_init) throw "camera is not initialized";
 
+  reset_projection();
+
   if (_changed_translation)
     glTranslated(_x, _y, _z); 
 
@@ -328,12 +421,7 @@ void allegro_opengl_project::camera_frame::update()
 {
   if (!_init) throw "camera is not initialized";
 
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  glFrustum(-0.5, 0.5, -0.5, 0.5, _znear, _zfar);
-
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
+  reset_projection();
 
   glTranslated(_x, _y, _z); 
 
