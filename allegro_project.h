@@ -16,13 +16,13 @@ public:
   virtual ~allegro_project();
   virtual void init(int display_flags);
   virtual void create_display(int w, int h);
+  virtual void display_resize();
   virtual void pre_render();
   virtual void render();
   virtual void post_render();
   virtual bool init_fps_timer(double speed_sec = 1.0/24.0);
   virtual void keyboard_event_handler(const ALLEGRO_EVENT& ev);
-  virtual void check_keyboard_state();
-  virtual void check_mouse_state();
+  virtual void check_input_state();
   virtual void main_loop(); 
   const ALLEGRO_FONT* get_system_font();
 
@@ -42,12 +42,12 @@ protected:
 class allegro_opengl_project : public allegro_project
 {
 public:
-  virtual void init(int display_flags);
+  virtual void create_display(int w, int h);
+  virtual void display_resize();
   virtual void pre_render() override;
   virtual void render() override;
   virtual void post_render() override;
-  virtual void check_keyboard_state();
-  virtual void check_mouse_state();
+  virtual void check_input_state();
 
   class camera_frame
   {

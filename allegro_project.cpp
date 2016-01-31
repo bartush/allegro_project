@@ -128,15 +128,15 @@ void allegro_project::keyboard_event_handler(const ALLEGRO_EVENT& ev)
     }
 }
 
-void allegro_project::check_keyboard_state() 
-{
-  al_get_keyboard_state(&_keyboard_state);
-}
-
-void allegro_project::check_mouse_state() 
+void allegro_project::check_input_state() 
 {
   _prev_mouse_state = _mouse_state;
   al_get_mouse_state(&_mouse_state);
+  al_get_keyboard_state(&_keyboard_state);
+}
+
+void allegro_project::display_resize()
+{
 }
 
 void allegro_project::main_loop()
@@ -169,8 +169,7 @@ void allegro_project::main_loop()
 	    al_acknowledge_resize(ev.display.source);
 	    _w = ev.display.width;
 	    _h = ev.display.height;
-	    GLsizei min_size = (GLsizei) std::min(_w, _h);
-	    glViewport ((_w - min_size)/2, (_h - min_size)/2, min_size, min_size);
+	    display_resize();
 	    break;
 	  }
 	default:
@@ -179,8 +178,7 @@ void allegro_project::main_loop()
       if (drawing_enabled && al_event_queue_is_empty(_event_queue))
 	{	
 	  drawing_enabled = false;
-	  check_keyboard_state();
-	  check_mouse_state();
+	  check_input_state();
 	  pre_render();
 	  render();
 	  post_render();
@@ -197,16 +195,37 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
 
 // allegro_opengl_project implementation ////////////////////////////////
 
-void allegro_opengl_project::init(int display_flags)
+void allegro_opengl_project::create_display(int w, int h)
 {
-  allegro_project::init(display_flags);
+  allegro_project::create_display(w, h);
   _camera.init_projection(45, 1, 100);
   _camera.translate(0, 0, -10);
 }
 
-void allegro_opengl_project::check_keyboard_state()
+void allegro_opengl_project::display_resize()
 {
-  allegro_project::check_keyboard_state();
+  allegro_project::display_resize();
+
+  GLsizei min_size = (GLsizei) std::min(_w, _h);
+  glViewport((_w - min_size)/2, (_h - min_size)/2, min_size, min_size);	    
+  //glViewport(0, 0, _w, _h);
+  //_camera.init_projection(45, _w/_h, 100);
+}
+
+
+void allegro_opengl_project::check_input_state()
+{
+  allegro_project::check_input_state();
+
+  const double zoom_scale = 0.5;
+  const double rot_scale = 0.1;
+  const double pan_scale = 0.01;
+
+  double dx = _prev_mouse_state.x - _mouse_state.x;
+  double dy = _prev_mouse_state.y - _mouse_state.y;
+  double dz = _prev_mouse_state.z - _mouse_state.z;
+
+  _camera.translate(0, 0, -dz * zoom_scale);
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_R))
     {
@@ -223,7 +242,8 @@ void allegro_opengl_project::check_keyboard_state()
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
     _camera.rotate(0, +1, 0);
 
-  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RSHIFT) || al_key_down(&_keyboard_state, ALLEGRO_KEY_LSHIFT))
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RSHIFT) || 
+      al_key_down(&_keyboard_state, ALLEGRO_KEY_LSHIFT))
     {
       if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
 	_camera.translate(0, +0.2, 0);
@@ -233,32 +253,18 @@ void allegro_opengl_project::check_keyboard_state()
 	_camera.translate(-0.2, 0, 0);
       if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
 	_camera.translate(+0.2, 0, 0);
-    }
+
+      if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
+	_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
+    } 
+  else if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
+    _camera.rotate(-dy * rot_scale, -dx * rot_scale, 0);
+
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
     _camera.translate(0, 0, -0.2);
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_EQUALS))
     _camera.translate(0, 0, +0.2);
-}
-
-void allegro_opengl_project::check_mouse_state() 
-{
-  allegro_project::check_mouse_state();
-  
-  const double zoom_scale = 0.5;
-  const double rot_scale = 0.1;
-
-  double dz = _prev_mouse_state.z - _mouse_state.z;
-  _camera.translate(0, 0, -dz * zoom_scale);
-
-  double dxa = _prev_mouse_state.y - _mouse_state.y;
-  if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
-    _camera.rotate(-dxa * rot_scale, 0, 0);
-  
-  double dya = _prev_mouse_state.x - _mouse_state.x;
-  if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
-    _camera.rotate(0, -dya * rot_scale, 0);
-
 }
 
 void allegro_opengl_project::pre_render() 
@@ -318,12 +324,16 @@ void allegro_opengl_project::post_render()
   glDisable(GL_DEPTH_TEST);
   glPopMatrix(); // come back to 2d allegro world  
 
-  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 35,  
-		ALLEGRO_ALIGN_LEFT, "%s", "Use arrow keys to rotate model");
-  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 25,  
-		ALLEGRO_ALIGN_LEFT, "%s", "\"+/-\" to zoom in/out");
-  al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 15,  
-		ALLEGRO_ALIGN_LEFT, "%s", "\"r\" to reset");
+  ALLEGRO_COLOR text_color = al_map_rgb(0, 100, 100);
+
+  al_draw_textf(_system_font, text_color, 10, _h - 45, ALLEGRO_ALIGN_LEFT,
+		"%s", "use arrow keys or middle mouse button to rotate model");
+  al_draw_textf(_system_font, text_color, 10, _h - 35, ALLEGRO_ALIGN_LEFT,
+		"%s", "hold shift and middle mouse button to pan");
+  al_draw_textf(_system_font, text_color, 10, _h - 25, ALLEGRO_ALIGN_LEFT,
+		"%s", "\"+/-\" or mouse wheel to zoom in/out");
+  al_draw_textf(_system_font, text_color, 10, _h - 15, ALLEGRO_ALIGN_LEFT,
+		"%s", "\"r\" to reset");
 }
 
 void allegro_opengl_project::enable_global_lighting()
