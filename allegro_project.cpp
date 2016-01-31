@@ -47,10 +47,13 @@ void allegro_project::init(int display_flags)
   if(!al_install_keyboard()) 
     throw "couldn't install keyboard!";
   al_register_event_source(_event_queue, al_get_keyboard_event_source());
+  al_get_keyboard_state(&_keyboard_state);
 
   if(!al_install_mouse())
-    throw "could't install keyboard!";
+    throw "could't install mouse!";
   al_register_event_source(_event_queue, al_get_mouse_event_source());
+  al_get_mouse_state(&_mouse_state);
+  _prev_mouse_state = _mouse_state;
 	  
   // Set display flags
   al_set_new_display_flags(display_flags);
@@ -132,6 +135,7 @@ void allegro_project::check_keyboard_state()
 
 void allegro_project::check_mouse_state() 
 {
+  _prev_mouse_state = _mouse_state;
   al_get_mouse_state(&_mouse_state);
 }
 
@@ -210,7 +214,6 @@ void allegro_opengl_project::check_keyboard_state()
       _camera.translate(0, 0, -10);
     }
   
-
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
     _camera.rotate(-1, 0, 0);
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
@@ -241,6 +244,21 @@ void allegro_opengl_project::check_keyboard_state()
 void allegro_opengl_project::check_mouse_state() 
 {
   allegro_project::check_mouse_state();
+  
+  const double zoom_scale = 0.5;
+  const double rot_scale = 0.1;
+
+  double dz = _prev_mouse_state.z - _mouse_state.z;
+  _camera.translate(0, 0, -dz * zoom_scale);
+
+  double dxa = _prev_mouse_state.y - _mouse_state.y;
+  if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
+    _camera.rotate(-dxa * rot_scale, 0, 0);
+  
+  double dya = _prev_mouse_state.x - _mouse_state.x;
+  if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
+    _camera.rotate(0, -dya * rot_scale, 0);
+
 }
 
 void allegro_opengl_project::pre_render() 
@@ -254,9 +272,6 @@ void allegro_opengl_project::pre_render()
   glEnable(GL_ALPHA_TEST);
 
   enable_global_lighting();
-
-  if (_mouse_state.buttons & 1) 
-      _camera.rotate(0, +1, 0);
 
   _camera.update();
 }
@@ -309,7 +324,6 @@ void allegro_opengl_project::post_render()
 		ALLEGRO_ALIGN_LEFT, "%s", "\"+/-\" to zoom in/out");
   al_draw_textf(_system_font, al_map_rgb(0, 255, 0), 10, _h - 15,  
 		ALLEGRO_ALIGN_LEFT, "%s", "\"r\" to reset");
-
 }
 
 void allegro_opengl_project::enable_global_lighting()

@@ -29,6 +29,7 @@ public:
 protected:
   ALLEGRO_KEYBOARD_STATE _keyboard_state;
   ALLEGRO_MOUSE_STATE    _mouse_state;
+  ALLEGRO_MOUSE_STATE    _prev_mouse_state;
   bool                   _init          = false;
   ALLEGRO_EVENT_QUEUE*   _event_queue   = nullptr;
   ALLEGRO_DISPLAY*       _display       = nullptr;
