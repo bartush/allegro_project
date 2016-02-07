@@ -90,8 +90,7 @@ void allegro_project::create_display(int w, int h)
     throw "couldn't create display!";
 
   al_register_event_source(_event_queue, al_get_display_event_source(_display));
-  _w = w;
-  _h = h;
+  display_resize(w, h);
   END_EXCEPTION_CATCH()
 }
 
@@ -200,6 +199,7 @@ void allegro_opengl_project::create_display(int w, int h)
   allegro_project::create_display(w, h);
   display_resize(w, h);
   _camera.translate(0, 0, -10);
+  _camera.rotate(180, 0, 0);
 }
 
 void allegro_opengl_project::display_resize(int w, int h)
@@ -214,7 +214,7 @@ void allegro_opengl_project::check_input_state()
   allegro_project::check_input_state();
 
   const double zoom_scale = 0.5;
-  const double rot_scale = 0.1;
+  const double rot_scale = 0.2;
   const double pan_scale = 0.01;
 
   double dx = _prev_mouse_state.x - _mouse_state.x;
@@ -227,6 +227,7 @@ void allegro_opengl_project::check_input_state()
     {
       _camera.reset();
       _camera.translate(0, 0, -10);
+      _camera.rotate(180, 0, 0);
     }
   
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
@@ -254,7 +255,7 @@ void allegro_opengl_project::check_input_state()
 	_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
     } 
   else if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
-    _camera.rotate(-dy * rot_scale, -dx * rot_scale, 0);
+    _camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
 
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
@@ -320,6 +321,8 @@ void allegro_opengl_project::post_render()
   glDisable(GL_DEPTH_TEST);
   glPopMatrix(); // come back to 2d allegro world  
 
+  draw_compas();
+
   ALLEGRO_COLOR text_color = al_map_rgb(0, 100, 100);
 
   al_draw_textf(_system_font, text_color, 10, _h - 45, ALLEGRO_ALIGN_LEFT,
@@ -350,6 +353,54 @@ void allegro_opengl_project::disable_global_lighting()
   glDisable(GL_LIGHT0);
   glDisable(GL_LIGHTING);
 }
+
+void allegro_opengl_project::draw_compas()
+{
+  glPushMatrix();
+
+  //glDisable(GL_DEPTH_TEST);
+  //glDisable(GL_CULL_FACE);
+  //glDisable(GL_TEXTURE_2D);
+  //glDisable(GL_LIGHTING);
+
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  // gluOrtho2D(-100, 100, -100, 100);
+  glOrtho(0, _w, _h, 0, -100, 100);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+
+  glTranslated(_w - 50, 50, 0);
+  glRotated(_camera.get_xa(), 1, 0, 0);
+  glRotated(-_camera.get_ya(), 0, 1, 0);
+  glRotated(_camera.get_za(), 0, 0, 1);
+  glScaled(35, 35, 35);
+
+  glLineWidth(3); 
+
+  glColor3f(1.0, 0.0, 0.0);
+  glBegin(GL_LINES);   // x-axis
+  glVertex3f(0.0, 0.0, 0.0);
+  glVertex3f(1, 0, 0);
+  glEnd();
+
+  glColor3f(0.0, 1.0, 0.0);
+  glBegin(GL_LINES);  // y-axis
+  glVertex3f(0.0, 0.0, 0.0);
+  glVertex3f(0, 1, 0);
+  glEnd();
+
+  glColor3f(0.0, 0.0, 1.0);
+  glBegin(GL_LINES);  // z-axis
+  glVertex3f(0.0, 0.0, 0.0);
+  glVertex3f(0, 0, 1);
+  glEnd();
+
+  glDisable(GL_DEPTH_TEST);
+  glPopMatrix();
+}
+
 
 //  allegro_opengl_project::transformation implementation ///////////////////////////
 
@@ -458,3 +509,7 @@ void allegro_opengl_project::camera_frame::update()
 double allegro_opengl_project::camera_frame::get_x() { return _x; }
 double allegro_opengl_project::camera_frame::get_y() { return _y; }
 double allegro_opengl_project::camera_frame::get_z() { return _z; }
+
+double allegro_opengl_project::camera_frame::get_xa() { return _xa; }
+double allegro_opengl_project::camera_frame::get_ya() { return _ya; }
+double allegro_opengl_project::camera_frame::get_za() { return _za; }

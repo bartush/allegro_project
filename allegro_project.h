@@ -48,6 +48,7 @@ public:
   virtual void render();
   virtual void post_render();
   virtual void check_input_state();
+  virtual void draw_compas();
 
   class camera_frame
   {
@@ -65,6 +66,10 @@ public:
     double get_x();
     double get_y();
     double get_z();
+
+    double get_xa();
+    double get_ya();
+    double get_za();
 
   protected:
     bool _init = false;
