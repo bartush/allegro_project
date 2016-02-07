@@ -135,8 +135,10 @@ void allegro_project::check_input_state()
   al_get_keyboard_state(&_keyboard_state);
 }
 
-void allegro_project::display_resize()
+void allegro_project::display_resize(int w, int h)
 {
+  _w = w;
+  _h = h;
 }
 
 void allegro_project::main_loop()
@@ -167,9 +169,7 @@ void allegro_project::main_loop()
 	case ALLEGRO_EVENT_DISPLAY_RESIZE:
 	  {
 	    al_acknowledge_resize(ev.display.source);
-	    _w = ev.display.width;
-	    _h = ev.display.height;
-	    display_resize();
+	    display_resize(ev.display.width, ev.display.height);
 	    break;
 	  }
 	default:
@@ -198,20 +198,16 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
 void allegro_opengl_project::create_display(int w, int h)
 {
   allegro_project::create_display(w, h);
-  _camera.init_projection(45, 1, 100);
+  display_resize(w, h);
   _camera.translate(0, 0, -10);
 }
 
-void allegro_opengl_project::display_resize()
+void allegro_opengl_project::display_resize(int w, int h)
 {
-  allegro_project::display_resize();
-
-  GLsizei min_size = (GLsizei) std::min(_w, _h);
-  glViewport((_w - min_size)/2, (_h - min_size)/2, min_size, min_size);	    
-  //glViewport(0, 0, _w, _h);
-  //_camera.init_projection(45, _w/_h, 100);
+  allegro_project::display_resize(w, h);
+  glViewport(0, 0, _w, _h);	    
+  _camera.init_projection(45, 1, 100, static_cast<double>(_w) / _h);
 }
-
 
 void allegro_opengl_project::check_input_state()
 {

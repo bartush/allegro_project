@@ -16,7 +16,7 @@ public:
   virtual ~allegro_project();
   virtual void init(int display_flags);
   virtual void create_display(int w, int h);
-  virtual void display_resize();
+  virtual void display_resize(int w, int h);
   virtual void pre_render();
   virtual void render();
   virtual void post_render();
@@ -43,10 +43,10 @@ class allegro_opengl_project : public allegro_project
 {
 public:
   virtual void create_display(int w, int h);
-  virtual void display_resize();
-  virtual void pre_render() override;
-  virtual void render() override;
-  virtual void post_render() override;
+  virtual void display_resize(int w, int h);
+  virtual void pre_render();
+  virtual void render();
+  virtual void post_render();
   virtual void check_input_state();
 
   class camera_frame
