@@ -223,6 +223,10 @@ void allegro_opengl_project::check_input_state()
 
   _camera.translate(0, 0, -dz * zoom_scale);
 
+  arcball_angles arcball = get_arcball_angles(_prev_mouse_state.x, _prev_mouse_state.y,
+					      _mouse_state.x, _mouse_state.y);
+
+
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_R))
     {
       _camera.reset();
@@ -235,9 +239,10 @@ void allegro_opengl_project::check_input_state()
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
     _camera.rotate(+1, 0, 0);
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_LEFT))
-    _camera.rotate(0, -1, 0);
-  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
     _camera.rotate(0, +1, 0);
+
+  if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
+    _camera.rotate(0, -1, 0);
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RSHIFT) || 
       al_key_down(&_keyboard_state, ALLEGRO_KEY_LSHIFT))
@@ -255,7 +260,8 @@ void allegro_opengl_project::check_input_state()
 	_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
     } 
   else if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
-    _camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
+    _camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
+    //    _camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
 
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
@@ -356,6 +362,9 @@ void allegro_opengl_project::disable_global_lighting()
 
 void allegro_opengl_project::draw_compas()
 {
+  int compas_size = 50;
+  int axis_length = 35; 
+  
   glPushMatrix();
 
   //glDisable(GL_DEPTH_TEST);
@@ -366,39 +375,127 @@ void allegro_opengl_project::draw_compas()
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   // gluOrtho2D(-100, 100, -100, 100);
-  glOrtho(0, _w, _h, 0, -100, 100);
+  glOrtho(0, _w, _h, 0, -compas_size, compas_size);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 
-  glTranslated(_w - 50, 50, 0);
+  glTranslated(_w - compas_size, compas_size, 0);
   glRotated(_camera.get_xa(), 1, 0, 0);
   glRotated(-_camera.get_ya(), 0, 1, 0);
   glRotated(_camera.get_za(), 0, 0, 1);
-  glScaled(35, 35, 35);
+  glScaled(1, 1, 1);
 
   glLineWidth(3); 
 
   glColor3f(1.0, 0.0, 0.0);
   glBegin(GL_LINES);   // x-axis
   glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(1, 0, 0);
+  glVertex3f(axis_length, 0, 0);
   glEnd();
 
   glColor3f(0.0, 1.0, 0.0);
   glBegin(GL_LINES);  // y-axis
   glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(0, 1, 0);
+  glVertex3f(0, axis_length, 0);
   glEnd();
 
   glColor3f(0.0, 0.0, 1.0);
   glBegin(GL_LINES);  // z-axis
   glVertex3f(0.0, 0.0, 0.0);
-  glVertex3f(0, 0, 1);
+  glVertex3f(0, 0, axis_length);
   glEnd();
 
   glDisable(GL_DEPTH_TEST);
   glPopMatrix();
+
+
+  //draw axis names
+  
+  std::pair<float, float> x_label_pos, y_label_pos, z_label_pos;
+
+  x_label_pos = std::make_pair(axis_length + 10, 0);
+  y_label_pos = std::make_pair(0, - (axis_length + 10));
+  z_label_pos = std::make_pair(0,0);
+
+  ALLEGRO_TRANSFORM t;
+  al_identity_transform(&t);
+  al_rotate_transform_3d(&t, 0, 0, 1, _camera.get_za_radinas());
+  al_rotate_transform_3d(&t, 0, 1, 0, _camera.get_ya_radians());
+  al_rotate_transform_3d(&t, 1, 0, 0, _camera.get_xa_radians());
+  
+  al_transform_coordinates(&t, &x_label_pos.first, &x_label_pos.second);
+  al_transform_coordinates(&t, &y_label_pos.first, &y_label_pos.second);
+  
+
+  al_draw_textf(_system_font,
+		al_map_rgb(100, 0, 100),
+		_w - compas_size + x_label_pos.first,  // x coord
+		compas_size - x_label_pos.second, // y cord
+		ALLEGRO_ALIGN_LEFT,
+		"%s", "X");
+  
+    al_draw_textf(_system_font,
+		al_map_rgb(0, 100, 100),
+		_w - compas_size + y_label_pos.first,  // x coord
+		compas_size - y_label_pos.second, // y cord
+		ALLEGRO_ALIGN_LEFT,
+		"%s", "Y");
+
+}
+
+allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angles(double screen_x1, 
+										  double screen_y1, 
+										  double screen_x2, 
+										  double screen_y2)
+{
+  arcball_angles result;
+  //double arcball_radius = std::max(_w/2, _h/2);
+
+  double px1 =  (screen_x1 - _w/2);
+  double py1 =  (screen_y1 - _h/2);
+
+  double px2 =  (screen_x2 - _w/2);
+  double py2 =  (screen_y2 - _h/2);
+
+  double r_p1 = sqrt(px1*px1 + py1*py1);
+  double r_p2 = sqrt(px2*px2 + py2*py2);
+
+
+  double arcball_radius = std::max(r_p1, r_p2);
+  //if (r_p1 > arcball_radius) arcball_radius = r_p1;
+  //if (r_p2 > arcball_radius) arcball_radius = r_p2;
+
+  double pz1 = sqrt(pow(arcball_radius, 2) - r_p1*r_p1);
+  double pz2 = sqrt(pow(arcball_radius, 2) - r_p2*r_p2);
+
+  double norm_px1 = px1/arcball_radius;
+  double norm_py1 = py1/arcball_radius;
+  double norm_pz1 = pz1/arcball_radius;
+  
+  double norm_px2 = px2/arcball_radius;
+  double norm_py2 = py2/arcball_radius;
+  double norm_pz2 = pz2/arcball_radius;
+
+
+  result.arc_x = norm_px2 - norm_px1;
+  result.arc_y = norm_py2 - norm_py1;
+  result.arc_z = norm_pz2 - norm_pz1;
+
+  result.arc_x = acos(std::min(1.0, norm_py1*norm_py2 + norm_pz1*norm_pz2));//*180/3.14;
+
+  result.arc_y = acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));//*180/3.14;
+
+  result.arc_z = acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));//*180/3.14;
+
+
+  //if (std::isnan(result.arc_x)) result.arc_x = 0;
+  //if (std::isnan(result.arc_y)) result.arc_y = 0;
+  //if (std::isnan(result.arc_z)) result.arc_z = 0;
+
+  std::cout << result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
+
+  return result;
 }
 
 
@@ -412,6 +509,7 @@ void allegro_opengl_project::camera_frame::init_projection(double fov, double zn
   _aspect = aspect;
   _init = true;
 }
+
 void allegro_opengl_project::camera_frame::reset()
 {
   if (!_init) return;
@@ -428,6 +526,7 @@ void allegro_opengl_project::camera_frame::reset()
   _changed_rotation = true;
   _changed_translation = true;
 }
+
 void allegro_opengl_project::camera_frame::reset_projection()
 {
   glMatrixMode(GL_PROJECTION);
@@ -441,6 +540,7 @@ void allegro_opengl_project::camera_frame::reset_projection()
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
 }
+
 void allegro_opengl_project::camera_frame::scale(double xs, double ys, double zs, bool absolute)
 {
   _xs = (absolute ? 0 : _xs) + xs;
@@ -513,3 +613,16 @@ double allegro_opengl_project::camera_frame::get_z() { return _z; }
 double allegro_opengl_project::camera_frame::get_xa() { return _xa; }
 double allegro_opengl_project::camera_frame::get_ya() { return _ya; }
 double allegro_opengl_project::camera_frame::get_za() { return _za; }
+
+float allegro_opengl_project::camera_frame::get_xa_radians()
+{
+  return _xa * std::acos(-1) / 180;
+}
+float allegro_opengl_project::camera_frame::get_ya_radians()
+{
+  return _ya * std::acos(-1) / 180;
+}
+float allegro_opengl_project::camera_frame::get_za_radinas()
+{
+  return _za * std::acos(-1) / 180;
+}

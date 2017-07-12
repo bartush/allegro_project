@@ -1,6 +1,6 @@
 #include <iostream>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_opengl.h>
@@ -47,8 +47,12 @@ public:
   virtual void pre_render();
   virtual void render();
   virtual void post_render();
+
   virtual void check_input_state();
-  virtual void draw_compas();
+  virtual void draw_compas(); 
+
+  struct arcball_angles {double arc_x = 0; double arc_y = 0; double arc_z = 0;};
+  arcball_angles get_arcball_angles(double screen_x1, double screen_y1, double screen_x2, double screen_y2);
 
   class camera_frame
   {
@@ -62,7 +66,6 @@ public:
     void apply();
     void update();
 
-
     double get_x();
     double get_y();
     double get_z();
@@ -70,6 +73,11 @@ public:
     double get_xa();
     double get_ya();
     double get_za();
+
+    float get_xa_radians();
+    float get_ya_radians();
+    float get_za_radinas();
+
 
   protected:
     bool _init = false;
@@ -86,7 +94,7 @@ public:
     bool _changed_translation = false;
     bool _changed_rotation    = false;
     bool _changed_scale       = false;
-    
+      
     double _fov    = 45;
     double _znear  = 0;
     double _zfar   = 10;
