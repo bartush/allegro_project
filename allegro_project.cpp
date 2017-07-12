@@ -362,7 +362,7 @@ void allegro_opengl_project::disable_global_lighting()
 
 void allegro_opengl_project::draw_compas()
 {
-  int compas_size = 50;
+  int compas_size = 60;
   int axis_length = 35; 
   
   glPushMatrix();
@@ -410,38 +410,88 @@ void allegro_opengl_project::draw_compas()
   glPopMatrix();
 
 
-  //draw axis names
+  //draw axes labels
   
-  std::pair<float, float> x_label_pos, y_label_pos, z_label_pos;
+  ALLEGRO_TRANSFORM TX, TY, TZ, TTX, TTY, TTZ, TRX, TRY, TRZ, TS;
+  al_identity_transform(&TX);
+  al_identity_transform(&TY);
+  al_identity_transform(&TZ);
+  al_identity_transform(&TTX);
+  al_identity_transform(&TTY);
+  al_identity_transform(&TTZ);
+  al_identity_transform(&TRX);
+  al_identity_transform(&TRY);
+  al_identity_transform(&TRZ);
+  al_identity_transform(&TS);
+  
+  al_rotate_transform_3d(&TRX, 1, 0, 0, _camera.get_xa_radians());
+  al_rotate_transform_3d(&TRY, 0, 1, 0, _camera.get_ya_radians());
+  al_rotate_transform_3d(&TRZ, 0, 0, 1, _camera.get_za_radinas());
+  al_translate_transform_3d(&TTX, 1, 0, 0);
+  al_translate_transform_3d(&TTY, 0, -1, 0);
+  al_translate_transform_3d(&TTZ, 0, 0, -1);
+  al_scale_transform_3d(&TS,
+			axis_length + 12,
+			axis_length + 12,
+			axis_length + 12);
 
-  x_label_pos = std::make_pair(axis_length + 10, 0);
-  y_label_pos = std::make_pair(0, - (axis_length + 10));
-  z_label_pos = std::make_pair(0,0);
+  al_compose_transform(&TX, &TTX);
+  al_compose_transform(&TX, &TS);
+  al_compose_transform(&TX, &TRZ);
+  al_compose_transform(&TX, &TRY);
+  al_compose_transform(&TX, &TRX);
 
-  ALLEGRO_TRANSFORM t;
-  al_identity_transform(&t);
-  al_rotate_transform_3d(&t, 0, 0, 1, _camera.get_za_radinas());
-  al_rotate_transform_3d(&t, 0, 1, 0, _camera.get_ya_radians());
-  al_rotate_transform_3d(&t, 1, 0, 0, _camera.get_xa_radians());
-  
-  al_transform_coordinates(&t, &x_label_pos.first, &x_label_pos.second);
-  al_transform_coordinates(&t, &y_label_pos.first, &y_label_pos.second);
-  
+  al_compose_transform(&TY, &TTY);
+  al_compose_transform(&TY, &TS);
+  al_compose_transform(&TY, &TRZ);
+  al_compose_transform(&TY, &TRY);
+  al_compose_transform(&TY, &TRX);
+
+  al_compose_transform(&TZ, &TTZ);
+  al_compose_transform(&TZ, &TS);
+  al_compose_transform(&TZ, &TRZ);
+  al_compose_transform(&TZ, &TRY);
+  al_compose_transform(&TZ, &TRX);
+
+  ALLEGRO_VERTEX x_label, y_label, z_label;
+
+  x_label.x = 0;
+  x_label.y = 0;
+  x_label.z = 0;
+
+  y_label.x = 0;
+  y_label.y = 0;
+  y_label.z = 0;
+
+  z_label.x = 0;
+  z_label.y = 0;
+  z_label.z = 0;
+
+  al_transform_coordinates_3d(&TX, &x_label.x, &x_label.y, &x_label.z);
+  al_transform_coordinates_3d(&TY, &y_label.x, &y_label.y, &y_label.z);
+  al_transform_coordinates_3d(&TZ, &z_label.x, &z_label.y, &z_label.z);
+ 
 
   al_draw_textf(_system_font,
 		al_map_rgb(100, 0, 100),
-		_w - compas_size + x_label_pos.first,  // x coord
-		compas_size - x_label_pos.second, // y cord
+		_w - compas_size + x_label.x,  // x coord
+		compas_size - x_label.y, // y cord
 		ALLEGRO_ALIGN_LEFT,
 		"%s", "X");
-  
-    al_draw_textf(_system_font,
-		al_map_rgb(0, 100, 100),
-		_w - compas_size + y_label_pos.first,  // x coord
-		compas_size - y_label_pos.second, // y cord
-		ALLEGRO_ALIGN_LEFT,
-		"%s", "Y");
 
+  al_draw_textf(_system_font,
+  		al_map_rgb(100, 100, 0),
+  		_w - compas_size + y_label.x,  // x coord
+  		compas_size - y_label.y, // y cord
+  		ALLEGRO_ALIGN_LEFT,
+  		"%s", "Y");
+
+  al_draw_textf(_system_font,
+    		al_map_rgb(0, 100, 100),
+    		_w - compas_size + z_label.x,  // x coord
+    		compas_size - z_label.y, // y cord
+    		ALLEGRO_ALIGN_LEFT,
+    		"%s", "Z");
 }
 
 allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angles(double screen_x1, 
