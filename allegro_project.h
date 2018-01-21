@@ -48,10 +48,15 @@ public:
   virtual void render();
   virtual void post_render();
 
-  virtual void check_input_state();
+  virtual void check_input_state() override;
   virtual void draw_compas(); 
 
-  struct arcball_angles {double arc_x = 0; double arc_y = 0; double arc_z = 0;};
+  struct arcball_angles
+  {
+    double arc_x = .0;
+    double arc_y = .0;
+    double arc_z = .0;
+  };
   arcball_angles get_arcball_angles(double screen_x1, double screen_y1, double screen_x2, double screen_y2);
 
   class camera_frame
@@ -63,7 +68,7 @@ public:
     void scale(double dxs, double dxy, double dxz, bool absolute = false);
     void rotate(double dxa, double dya, double dza, bool absolute = false);
     void translate(double dx, double dy, double dz, bool absolute = false);
-    void apply();
+    //void apply();
     void update();
 
     double get_x();

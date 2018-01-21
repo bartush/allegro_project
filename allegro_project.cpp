@@ -223,10 +223,6 @@ void allegro_opengl_project::check_input_state()
 
   _camera.translate(0, 0, -dz * zoom_scale);
 
-  arcball_angles arcball = get_arcball_angles(_prev_mouse_state.x, _prev_mouse_state.y,
-					      _mouse_state.x, _mouse_state.y);
-
-
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_R))
     {
       _camera.reset();
@@ -259,9 +255,20 @@ void allegro_opengl_project::check_input_state()
       if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
 	_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
     } 
-  else if ((_prev_mouse_state.buttons & 4) && (_mouse_state.buttons & 4))
-    _camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
-    //    _camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
+  else if ((_prev_mouse_state.buttons & 4)  && (_mouse_state.buttons & 4))
+    {
+      arcball_angles arcball = get_arcball_angles(_prev_mouse_state.x, _prev_mouse_state.y,
+						  _mouse_state.x, _mouse_state.y);
+
+      bool zero_arcball_angles =
+	arcball.arc_x == .0 &&
+	arcball.arc_y == .0 &&
+	arcball.arc_z == .0;
+      if (!zero_arcball_angles)
+	_camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
+      
+      //_camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
+    }
 
 
   if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
@@ -374,7 +381,6 @@ void allegro_opengl_project::draw_compas()
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  // gluOrtho2D(-100, 100, -100, 100);
   glOrtho(0, _w, _h, 0, -compas_size, compas_size);
 
   glMatrixMode(GL_MODELVIEW);
@@ -500,6 +506,9 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
 										  double screen_y2)
 {
   arcball_angles result;
+  if (screen_x1 == screen_x2 && screen_y1 == screen_y2)
+    return result;
+
   //double arcball_radius = std::max(_w/2, _h/2);
 
   double px1 =  (screen_x1 - _w/2);
@@ -512,7 +521,9 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
   double r_p2 = sqrt(px2*px2 + py2*py2);
 
 
-  double arcball_radius = std::max(r_p1, r_p2);
+  //double arcball_radius = std::max(r_p1, r_p2);
+  double arcball_radius = r_p1;
+  
   //if (r_p1 > arcball_radius) arcball_radius = r_p1;
   //if (r_p2 > arcball_radius) arcball_radius = r_p2;
 
@@ -532,18 +543,23 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
   result.arc_y = norm_py2 - norm_py1;
   result.arc_z = norm_pz2 - norm_pz1;
 
-  result.arc_x = acos(std::min(1.0, norm_py1*norm_py2 + norm_pz1*norm_pz2));//*180/3.14;
+  const double sign_x = result.arc_x >= 0 ? 1. : -1;
+  const double sign_y = result.arc_y >= 0 ? 1. : -1;
+  const double sign_z = result.arc_z >= 0 ? 1. : -1;
 
-  result.arc_y = acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));//*180/3.14;
+  const double rot_scale = 3.;
 
-  result.arc_z = acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));//*180/3.14;
+  result.arc_x = rot_scale * sign_x * acos(std::min(1.0,norm_py1*norm_py2 + norm_pz1*norm_pz2));
+  result.arc_y = rot_scale * sign_y * acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));
+  result.arc_z = rot_scale * sign_z * acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));
 
 
   //if (std::isnan(result.arc_x)) result.arc_x = 0;
   //if (std::isnan(result.arc_y)) result.arc_y = 0;
   //if (std::isnan(result.arc_z)) result.arc_z = 0;
 
-  std::cout << result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
+  std::cout << "radius - " << arcball_radius << ";" <<
+    result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
 
   return result;
 }
@@ -615,29 +631,29 @@ void allegro_opengl_project::camera_frame::translate(double x, double y, double 
   _z = (absolute ? 0 : _z) + z;
   _changed_translation = true;
 }
-void allegro_opengl_project::camera_frame::apply()
-{
-  if (!_init) throw "camera is not initialized";
+// void allegro_opengl_project::camera_frame::apply()
+// {
+//   if (!_init) throw "camera is not initialized";
 
-  reset_projection();
+//   reset_projection();
 
-  if (_changed_translation)
-    glTranslated(_x, _y, _z); 
+//   if (_changed_translation)
+//     glTranslated(_x, _y, _z); 
 
-  if (_changed_rotation)
-    {
-      glRotated(_xa, 1, 0, 0);
-      glRotated(_ya, 0, 1, 0);
-      glRotated(_za, 0, 0, 1);
-    }
+//   if (_changed_rotation)
+//     {
+//       glRotated(_xa, 1, 0, 0);
+//       glRotated(_ya, 0, 1, 0);
+//       glRotated(_za, 0, 0, 1);
+//     }
 
-  if (_changed_scale) 
-      glScaled(_xs, _ys, _zs);
+//   if (_changed_scale) 
+//       glScaled(_xs, _ys, _zs);
 
-  _changed_scale = false;
-  _changed_rotation = false;
-  _changed_translation = false;  
-}
+//   _changed_scale = false;
+//   _changed_rotation = false;
+//   _changed_translation = false;  
+// }
 void allegro_opengl_project::camera_frame::update()
 {
   if (!_init) throw "camera is not initialized";
