@@ -1,0 +1,18 @@
+# depslib dependency file v1.0
+1569069805 source:/home/vv/allegro_project/allegro_project.cpp
+	"allegro_project.h"
+
+1569069768 /home/vv/allegro_project/allegro_project.h
+	<iostream>
+	<algorithm>
+	<cmath>
+	<allegro5/allegro5.h>
+	<allegro5/allegro_opengl.h>
+	<allegro5/allegro_font.h>
+	<allegro5/allegro_primitives.h>
+	<allegro5/allegro_image.h>
+
+1568574752 source:/home/vv/allegro_project/test.cpp
+	"allegro_project.h"
+	<vector>
+
