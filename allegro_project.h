@@ -27,16 +27,16 @@ public:
     const ALLEGRO_FONT* get_system_font();
 
 protected:
-    ALLEGRO_KEYBOARD_STATE _keyboard_state;
-    ALLEGRO_MOUSE_STATE    _mouse_state;
-    ALLEGRO_MOUSE_STATE    _prev_mouse_state;
+    ALLEGRO_KEYBOARD_STATE m_keyboard_state;
+    ALLEGRO_MOUSE_STATE    m_mouse_state;
+    ALLEGRO_MOUSE_STATE    m_prev_mouse_state;
     bool                   m_init          = false;
-    ALLEGRO_EVENT_QUEUE*   _event_queue   = nullptr;
-    ALLEGRO_DISPLAY*       _display       = nullptr;
-    ALLEGRO_TIMER*         _fps           = nullptr;
-    ALLEGRO_FONT*          _system_font   = nullptr;
-    int                    _w             = 0;
-    int                    _h             = 0;
+    ALLEGRO_EVENT_QUEUE*   m_event_queue   = nullptr;
+    ALLEGRO_DISPLAY*       m_display       = nullptr;
+    ALLEGRO_TIMER*         m_fps           = nullptr;
+    ALLEGRO_FONT*          m_system_font   = nullptr;
+    int                    m_w             = 0;
+    int                    m_h             = 0;
 };
 
 class allegro_opengl_project : public allegro_project
@@ -81,7 +81,7 @@ public:
 
         float get_xa_radians();
         float get_ya_radians();
-        float get_za_radinas();
+        float get_za_radians();
 
 
     protected:
@@ -107,7 +107,7 @@ public:
     };
 
 protected:
-    camera_frame _camera;
+    camera_frame m_camera;
 
     virtual void enable_global_lighting();
     virtual void disable_global_lighting();

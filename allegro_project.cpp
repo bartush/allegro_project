@@ -5,27 +5,27 @@ allegro_project::allegro_project() {}
 
 allegro_project::~allegro_project()
 {
-    if (_display)
+    if (m_display)
     {
-        al_destroy_display(_display);
-        _display = nullptr;
+        al_destroy_display(m_display);
+        m_display = nullptr;
     }
-    if (_event_queue)
+    if (m_event_queue)
     {
-        al_flush_event_queue(_event_queue);
-        al_destroy_event_queue(_event_queue);
-        _event_queue = nullptr;
+        al_flush_event_queue(m_event_queue);
+        al_destroy_event_queue(m_event_queue);
+        m_event_queue = nullptr;
     }
-    if (_fps)
+    if (m_fps)
     {
-        al_stop_timer(_fps);
-        al_destroy_timer(_fps);
-        _fps = nullptr;
+        al_stop_timer(m_fps);
+        al_destroy_timer(m_fps);
+        m_fps = nullptr;
     }
-    if (_system_font)
+    if (m_system_font)
     {
-        al_destroy_font(_system_font);
-        _system_font = nullptr;
+        al_destroy_font(m_system_font);
+        m_system_font = nullptr;
     }
 }
 
@@ -36,24 +36,24 @@ void allegro_project::init(int display_flags)
     if (!al_init())
         throw "couldn't init allegro!";
 
-    _event_queue = al_create_event_queue();
-    if (!_event_queue)
+    m_event_queue = al_create_event_queue();
+    if (!m_event_queue)
         throw "couldn't start event queue!";
 
     if (!init_fps_timer())
         throw "couldn't init timer!";
-    al_start_timer(_fps);
+    al_start_timer(m_fps);
 
     if(!al_install_keyboard())
         throw "couldn't install keyboard!";
-    al_register_event_source(_event_queue, al_get_keyboard_event_source());
-    al_get_keyboard_state(&_keyboard_state);
+    al_register_event_source(m_event_queue, al_get_keyboard_event_source());
+    al_get_keyboard_state(&m_keyboard_state);
 
     if(!al_install_mouse())
         throw "could't install mouse!";
-    al_register_event_source(_event_queue, al_get_mouse_event_source());
-    al_get_mouse_state(&_mouse_state);
-    _prev_mouse_state = _mouse_state;
+    al_register_event_source(m_event_queue, al_get_mouse_event_source());
+    al_get_mouse_state(&m_mouse_state);
+    m_prev_mouse_state = m_mouse_state;
 
     // Set display flags
     al_set_new_display_flags(display_flags);
@@ -70,8 +70,8 @@ void allegro_project::init(int display_flags)
         throw "couldn't init image addon!";
 
     al_init_font_addon();
-    _system_font = al_create_builtin_font();
-    if (!_system_font)
+    m_system_font = al_create_builtin_font();
+    if (!m_system_font)
         throw "system font is not initialized!";
 
     m_init = true;
@@ -83,14 +83,14 @@ void allegro_project::create_display(int w, int h)
     BEGIN_EXCEPTION_CATCH()
     if (!m_init)
         throw "Allegro project is not initialized!";
-    if (!_event_queue || _display)
+    if (!m_event_queue || m_display)
         throw "event queue is not initialised or display is already created!";
 
-    _display = al_create_display(w, h);
-    if (!_display)
+    m_display = al_create_display(w, h);
+    if (!m_display)
         throw "couldn't create display!";
 
-    al_register_event_source(_event_queue, al_get_display_event_source(_display));
+    al_register_event_source(m_event_queue, al_get_display_event_source(m_display));
     display_resize(w, h);
     END_EXCEPTION_CATCH()
 }
@@ -100,7 +100,7 @@ void allegro_project::pre_render() {}
 void allegro_project::render()
 {
     al_clear_to_color(al_map_rgb(0,0,255*0.2));
-    al_draw_textf(_system_font, al_map_rgb(0, 255, 0), _w/2, _h/2,
+    al_draw_textf(m_system_font, al_map_rgb(0, 255, 0), m_w/2, m_h/2,
                   ALLEGRO_ALIGN_CENTER, "%s", "TEST");
 }
 
@@ -108,15 +108,15 @@ void allegro_project::post_render() {}
 
 bool allegro_project::init_fps_timer(double speed_sec)
 {
-    if (!_event_queue)
+    if (!m_event_queue)
         return false;
-    if (_fps)
-        al_destroy_timer(_fps);
-    _fps = al_create_timer(speed_sec);
-    if (!_fps)
+    if (m_fps)
+        al_destroy_timer(m_fps);
+    m_fps = al_create_timer(speed_sec);
+    if (!m_fps)
         return false;
 
-    al_register_event_source(_event_queue, al_get_timer_event_source(_fps));
+    al_register_event_source(m_event_queue, al_get_timer_event_source(m_fps));
     return true;
 }
 
@@ -131,15 +131,15 @@ void allegro_project::keyboard_event_handler(const ALLEGRO_EVENT& ev)
 
 void allegro_project::check_input_state()
 {
-    _prev_mouse_state = _mouse_state;
-    al_get_mouse_state(&_mouse_state);
-    al_get_keyboard_state(&_keyboard_state);
+    m_prev_mouse_state = m_mouse_state;
+    al_get_mouse_state(&m_mouse_state);
+    al_get_keyboard_state(&m_keyboard_state);
 }
 
 void allegro_project::display_resize(int w, int h)
 {
-    _w = w;
-    _h = h;
+    m_w = w;
+    m_h = h;
 }
 
 void allegro_project::main_loop()
@@ -147,17 +147,17 @@ void allegro_project::main_loop()
     BEGIN_EXCEPTION_CATCH()
     if (!m_init)
         throw "Allegro openGL project is not initialized!";
-    if (!_event_queue)
+    if (!m_event_queue)
         return;
     ALLEGRO_EVENT ev;
     bool drawing_enabled = false;
     while (true)
     {
-        al_wait_for_event(_event_queue, &ev);
+        al_wait_for_event(m_event_queue, &ev);
         switch (ev.type)
         {
         case ALLEGRO_EVENT_TIMER:
-            if (_display)
+            if (m_display)
                 drawing_enabled = true;
             break;
         case ALLEGRO_EVENT_DISPLAY_CLOSE:
@@ -179,7 +179,7 @@ void allegro_project::main_loop()
         default:
             break;
         }
-        if (drawing_enabled && al_event_queue_is_empty(_event_queue))
+        if (drawing_enabled && al_event_queue_is_empty(m_event_queue))
         {
             drawing_enabled = false;
             check_input_state();
@@ -194,7 +194,7 @@ void allegro_project::main_loop()
 
 const ALLEGRO_FONT* allegro_project::get_system_font()
 {
-    return _system_font;
+    return m_system_font;
 }
 
 // allegro_opengl_project implementation ////////////////////////////////
@@ -203,15 +203,15 @@ void allegro_opengl_project::create_display(int w, int h)
 {
     allegro_project::create_display(w, h);
     display_resize(w, h);
-    _camera.translate(0, 0, -10);
-    _camera.rotate(180, 0, 0);
+    m_camera.translate(0, 0, -10);
+    m_camera.rotate(180, 0, 0);
 }
 
 void allegro_opengl_project::display_resize(int w, int h)
 {
     allegro_project::display_resize(w, h);
-    glViewport(0, 0, _w, _h);
-    _camera.init_projection(45, 1, 100, static_cast<double>(_w) / _h);
+    glViewport(0, 0, m_w, m_h);
+    m_camera.init_projection(45, 1, 100, static_cast<double>(m_w) / m_h);
 }
 
 void allegro_opengl_project::check_input_state()
@@ -222,48 +222,48 @@ void allegro_opengl_project::check_input_state()
     const double rot_scale = 0.2;
     const double pan_scale = 0.01;
 
-    double dx = _prev_mouse_state.x - _mouse_state.x;
-    double dy = _prev_mouse_state.y - _mouse_state.y;
-    double dz = _prev_mouse_state.z - _mouse_state.z;
+    double dx = m_prev_mouse_state.x - m_mouse_state.x;
+    double dy = m_prev_mouse_state.y - m_mouse_state.y;
+    double dz = m_prev_mouse_state.z - m_mouse_state.z;
 
-    _camera.translate(0, 0, -dz * zoom_scale);
+    m_camera.translate(0, 0, -dz * zoom_scale);
 
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_R))
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_R))
     {
-        _camera.reset();
-        _camera.translate(0, 0, -10);
-        _camera.rotate(180, 0, 0);
+        m_camera.reset();
+        m_camera.translate(0, 0, -10);
+        m_camera.rotate(180, 0, 0);
     }
 
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
-        _camera.rotate(-1, 0, 0);
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
-        _camera.rotate(+1, 0, 0);
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_LEFT))
-        _camera.rotate(0, +1, 0);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_UP))
+        m_camera.rotate(-1, 0, 0);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_DOWN))
+        m_camera.rotate(+1, 0, 0);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_LEFT))
+        m_camera.rotate(0, +1, 0);
 
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
-        _camera.rotate(0, -1, 0);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RIGHT))
+        m_camera.rotate(0, -1, 0);
 
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RSHIFT) ||
-            al_key_down(&_keyboard_state, ALLEGRO_KEY_LSHIFT))
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RSHIFT) ||
+            al_key_down(&m_keyboard_state, ALLEGRO_KEY_LSHIFT))
     {
-        if (al_key_down(&_keyboard_state, ALLEGRO_KEY_UP))
-            _camera.translate(0, +0.2, 0);
-        if (al_key_down(&_keyboard_state, ALLEGRO_KEY_DOWN))
-            _camera.translate(0, -0.2, 0);
-        if (al_key_down(&_keyboard_state, ALLEGRO_KEY_LEFT))
-            _camera.translate(-0.2, 0, 0);
-        if (al_key_down(&_keyboard_state, ALLEGRO_KEY_RIGHT))
-            _camera.translate(+0.2, 0, 0);
+        if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_UP))
+            m_camera.translate(0, +0.2, 0);
+        if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_DOWN))
+            m_camera.translate(0, -0.2, 0);
+        if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_LEFT))
+            m_camera.translate(-0.2, 0, 0);
+        if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RIGHT))
+            m_camera.translate(+0.2, 0, 0);
 
-        if (al_mouse_button_down(&_prev_mouse_state, 3) && al_mouse_button_down(&_mouse_state, 3))
-            _camera.translate(-dx * pan_scale, dy * pan_scale, 0);
+        if (al_mouse_button_down(&m_prev_mouse_state, 3) && al_mouse_button_down(&m_mouse_state, 3))
+            m_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
     }
-    else if (al_mouse_button_down(&_prev_mouse_state, 3)  && al_mouse_button_down(&_mouse_state, 3))
+    else if (al_mouse_button_down(&m_prev_mouse_state, 3)  && al_mouse_button_down(&m_mouse_state, 3))
     {
-        arcball_angles arcball = get_arcball_angles(_prev_mouse_state.x, _prev_mouse_state.y,
-                                 _mouse_state.x, _mouse_state.y);
+        arcball_angles arcball = get_arcball_angles(m_prev_mouse_state.x, m_prev_mouse_state.y,
+                                 m_mouse_state.x, m_mouse_state.y);
 
         bool zero_arcball_angles =
             arcball.arc_x == .0 &&
@@ -271,15 +271,15 @@ void allegro_opengl_project::check_input_state()
             arcball.arc_z == .0;
 
         if (!zero_arcball_angles)
-            _camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
+            m_camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
 
         //_camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
     }
 
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_MINUS))
-        _camera.translate(0, 0, -0.2);
-    if (al_key_down(&_keyboard_state, ALLEGRO_KEY_EQUALS))
-        _camera.translate(0, 0, +0.2);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_MINUS))
+        m_camera.translate(0, 0, -0.2);
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_EQUALS))
+        m_camera.translate(0, 0, +0.2);
 }
 
 void allegro_opengl_project::pre_render()
@@ -294,7 +294,7 @@ void allegro_opengl_project::pre_render()
 
     enable_global_lighting();
 
-    _camera.update();
+    m_camera.update();
 }
 
 void allegro_opengl_project::render()
@@ -348,13 +348,13 @@ void allegro_opengl_project::post_render()
 
     ALLEGRO_COLOR text_color = al_map_rgb(0, 100, 100);
 
-    al_draw_textf(_system_font, text_color, 10, _h - 45, ALLEGRO_ALIGN_LEFT,
+    al_draw_textf(m_system_font, text_color, 10, m_h - 45, ALLEGRO_ALIGN_LEFT,
                   "%s", "use arrow keys or middle mouse button to rotate model");
-    al_draw_textf(_system_font, text_color, 10, _h - 35, ALLEGRO_ALIGN_LEFT,
+    al_draw_textf(m_system_font, text_color, 10, m_h - 35, ALLEGRO_ALIGN_LEFT,
                   "%s", "hold shift and middle mouse button to pan");
-    al_draw_textf(_system_font, text_color, 10, _h - 25, ALLEGRO_ALIGN_LEFT,
+    al_draw_textf(m_system_font, text_color, 10, m_h - 25, ALLEGRO_ALIGN_LEFT,
                   "%s", "\"+/-\" or mouse wheel to zoom in/out");
-    al_draw_textf(_system_font, text_color, 10, _h - 15, ALLEGRO_ALIGN_LEFT,
+    al_draw_textf(m_system_font, text_color, 10, m_h - 15, ALLEGRO_ALIGN_LEFT,
                   "%s", "\"r\" to reset");
 }
 
@@ -381,6 +381,7 @@ void allegro_opengl_project::draw_compas()
 {
     int compas_size = 60;
     int axis_length = 35;
+    int text_offset = 12;
 
     glPushMatrix();
 
@@ -391,15 +392,15 @@ void allegro_opengl_project::draw_compas()
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, _w, _h, 0, -compas_size, compas_size);
+    glOrtho(0, m_w, m_h, 0, -compas_size, compas_size);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslated(_w - compas_size, compas_size, 0);
-    glRotated(_camera.get_xa(), 1, 0, 0);
-    glRotated(-_camera.get_ya(), 0, 1, 0);
-    glRotated(_camera.get_za(), 0, 0, 1);
+    glTranslated(m_w - compas_size, compas_size, 0);
+    glRotated(m_camera.get_xa(), 1, 0, 0);
+    glRotated(-m_camera.get_ya(), 0, 1, 0);
+    glRotated(m_camera.get_za(), 0, 0, 1);
     glScaled(1, 1, 1);
 
     glLineWidth(3);
@@ -440,16 +441,16 @@ void allegro_opengl_project::draw_compas()
     al_identity_transform(&TRZ);
     al_identity_transform(&TS);
 
-    al_rotate_transform_3d(&TRX, 1, 0, 0, _camera.get_xa_radians());
-    al_rotate_transform_3d(&TRY, 0, 1, 0, _camera.get_ya_radians());
-    al_rotate_transform_3d(&TRZ, 0, 0, 1, _camera.get_za_radinas());
+    al_rotate_transform_3d(&TRX, 1, 0, 0, m_camera.get_xa_radians());
+    al_rotate_transform_3d(&TRY, 0, 1, 0, m_camera.get_ya_radians());
+    al_rotate_transform_3d(&TRZ, 0, 0, 1, m_camera.get_za_radians());
     al_translate_transform_3d(&TTX, 1, 0, 0);
     al_translate_transform_3d(&TTY, 0, -1, 0);
     al_translate_transform_3d(&TTZ, 0, 0, -1);
     al_scale_transform_3d(&TS,
-                          axis_length + 12,
-                          axis_length + 12,
-                          axis_length + 12);
+                          axis_length + text_offset,
+                          axis_length + text_offset,
+                          axis_length + text_offset);
 
     al_compose_transform(&TX, &TTX);
     al_compose_transform(&TX, &TS);
@@ -488,26 +489,50 @@ void allegro_opengl_project::draw_compas()
     al_transform_coordinates_3d(&TZ, &z_label.x, &z_label.y, &z_label.z);
 
 
-    al_draw_textf(_system_font,
+    al_draw_textf(m_system_font,
                   al_map_rgb(100, 0, 100),
-                  _w - compas_size + x_label.x,  // x coord
+                  m_w - compas_size + x_label.x,  // x coord
                   compas_size - x_label.y, // y cord
                   ALLEGRO_ALIGN_LEFT,
                   "%s", "X");
 
-    al_draw_textf(_system_font,
+    al_draw_textf(m_system_font,
                   al_map_rgb(100, 100, 0),
-                  _w - compas_size + y_label.x,  // x coord
+                  m_w - compas_size + y_label.x,  // x coord
                   compas_size - y_label.y, // y cord
                   ALLEGRO_ALIGN_LEFT,
                   "%s", "Y");
 
-    al_draw_textf(_system_font,
+    al_draw_textf(m_system_font,
                   al_map_rgb(0, 100, 100),
-                  _w - compas_size + z_label.x,  // x coord
+                  m_w - compas_size + z_label.x,  // x coord
                   compas_size - z_label.y, // y cord
                   ALLEGRO_ALIGN_LEFT,
                   "%s", "Z");
+
+    al_draw_textf(m_system_font,
+                  al_map_rgb(0, 100, 0),
+                  10,  // x coord
+                  20, // y cord
+                  ALLEGRO_ALIGN_LEFT,
+                  "%f", m_camera.get_xa_radians());
+
+    al_draw_textf(m_system_font,
+                  al_map_rgb(0, 100, 0),
+                  10,  // x coord
+                  30, // y cord
+                  ALLEGRO_ALIGN_LEFT,
+                  "%f", m_camera.get_ya_radians());
+
+    al_draw_textf(m_system_font,
+                  al_map_rgb(0, 100, 0),
+                  10,  // x coord
+                  40, // y cord
+                  ALLEGRO_ALIGN_LEFT,
+                  "%f", m_camera.get_za_radians());
+
+
+
 }
 
 allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angles(double screen_x1,
@@ -521,11 +546,11 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
 
     //double arcball_radius = std::max(_w/2, _h/2);
 
-    double px1 =  (screen_x1 - _w/2);
-    double py1 =  (screen_y1 - _h/2);
+    double px1 =  (screen_x1 - m_w/2);
+    double py1 =  (screen_y1 - m_h/2);
 
-    double px2 =  (screen_x2 - _w/2);
-    double py2 =  (screen_y2 - _h/2);
+    double px2 =  (screen_x2 - m_w/2);
+    double py2 =  (screen_y2 - m_h/2);
 
     double r_p1 = sqrt(px1*px1 + py1*py1);
     double r_p2 = sqrt(px2*px2 + py2*py2);
@@ -568,8 +593,8 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
     //if (std::isnan(result.arc_y)) result.arc_y = 0;
     //if (std::isnan(result.arc_z)) result.arc_z = 0;
 
-    std::cout << "radius - " << arcball_radius << ";" <<
-              result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
+//    std::cout << "radius - " << arcball_radius << ";" <<
+//              result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
 
     return result;
 }
@@ -720,7 +745,7 @@ float allegro_opengl_project::camera_frame::get_ya_radians()
 {
     return m_ya * std::acos(-1) / 180;
 }
-float allegro_opengl_project::camera_frame::get_za_radinas()
+float allegro_opengl_project::camera_frame::get_za_radians()
 {
     return m_za * std::acos(-1) / 180;
 }
