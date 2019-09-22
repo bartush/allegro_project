@@ -1,5 +1,8 @@
 #include "allegro_project.h"
+#include "vv_utils.h"
 
+
+ALLEGRO_FONT* allegro_project::m_system_font = nullptr;
 
 allegro_project::allegro_project() {}
 
@@ -262,16 +265,22 @@ void allegro_opengl_project::check_input_state()
     }
     else if (al_mouse_button_down(&m_prev_mouse_state, 3)  && al_mouse_button_down(&m_mouse_state, 3))
     {
-        arcball_angles arcball = get_arcball_angles(m_prev_mouse_state.x, m_prev_mouse_state.y,
-                                 m_mouse_state.x, m_mouse_state.y);
+        arcball_state_struct astate;
+        astate.m_x1 = m_prev_mouse_state.x;
+        astate.m_y1 = m_prev_mouse_state.y;
+        astate.m_x2 = m_mouse_state.x;
+        astate.m_y2 = m_mouse_state.y;
+
+        arcball_angles_struct arcball =
+            get_arcball_angles(astate);
 
         bool zero_arcball_angles =
-            arcball.arc_x == .0 &&
-            arcball.arc_y == .0 &&
-            arcball.arc_z == .0;
+            vv_is_zero(arcball.m_ax) &&
+            vv_is_zero(arcball.m_ay) == .0 &&
+            vv_is_zero(arcball.m_az) == .0;
 
         if (!zero_arcball_angles)
-            m_camera.rotate(arcball.arc_x * rot_scale, arcball.arc_y * rot_scale, arcball.arc_z * rot_scale);
+            m_camera.rotate(arcball.m_ax * rot_scale, arcball.m_ay * rot_scale, arcball.m_az * rot_scale);
 
         //_camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
     }
@@ -337,16 +346,9 @@ void allegro_opengl_project::render()
     }
 }
 
-void allegro_opengl_project::post_render()
+void allegro_opengl_project::draw_help_message()
 {
-    disable_global_lighting();
-
-    glDisable(GL_DEPTH_TEST);
-    glPopMatrix(); // come back to 2d allegro world
-
-    draw_compas();
-
-    ALLEGRO_COLOR text_color = al_map_rgb(0, 100, 100);
+    const auto text_color = al_map_rgb(0, 100, 100);
 
     al_draw_textf(m_system_font, text_color, 10, m_h - 45, ALLEGRO_ALIGN_LEFT,
                   "%s", "use arrow keys or middle mouse button to rotate model");
@@ -356,6 +358,23 @@ void allegro_opengl_project::post_render()
                   "%s", "\"+/-\" or mouse wheel to zoom in/out");
     al_draw_textf(m_system_font, text_color, 10, m_h - 15, ALLEGRO_ALIGN_LEFT,
                   "%s", "\"r\" to reset");
+}
+
+void allegro_opengl_project::draw_debug_info()
+{
+    m_camera.debug_info();
+}
+
+void allegro_opengl_project::post_render()
+{
+    disable_global_lighting();
+
+    glDisable(GL_DEPTH_TEST);
+    glPopMatrix(); // come back to 2d allegro world
+
+    draw_compas();
+    draw_help_message();
+    draw_debug_info();
 }
 
 void allegro_opengl_project::enable_global_lighting()
@@ -443,7 +462,7 @@ void allegro_opengl_project::draw_compas()
 
     al_rotate_transform_3d(&TRX, 1, 0, 0, m_camera.get_xa_radians());
     al_rotate_transform_3d(&TRY, 0, 1, 0, m_camera.get_ya_radians());
-    al_rotate_transform_3d(&TRZ, 0, 0, 1, m_camera.get_za_radians());
+    al_rotate_transform_3d(&TRZ, 0, 0, -1, m_camera.get_za_radians());
     al_translate_transform_3d(&TTX, 1, 0, 0);
     al_translate_transform_3d(&TTY, 0, -1, 0);
     al_translate_transform_3d(&TTZ, 0, 0, -1);
@@ -509,58 +528,28 @@ void allegro_opengl_project::draw_compas()
                   compas_size - z_label.y, // y cord
                   ALLEGRO_ALIGN_LEFT,
                   "%s", "Z");
-
-    al_draw_textf(m_system_font,
-                  al_map_rgb(0, 100, 0),
-                  10,  // x coord
-                  20, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%f", m_camera.get_xa_radians());
-
-    al_draw_textf(m_system_font,
-                  al_map_rgb(0, 100, 0),
-                  10,  // x coord
-                  30, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%f", m_camera.get_ya_radians());
-
-    al_draw_textf(m_system_font,
-                  al_map_rgb(0, 100, 0),
-                  10,  // x coord
-                  40, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%f", m_camera.get_za_radians());
-
-
-
 }
 
-allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angles(double screen_x1,
-        double screen_y1,
-        double screen_x2,
-        double screen_y2)
+allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcball_angles(const arcball_state_struct &astate)
 {
-    arcball_angles result;
-    if (screen_x1 == screen_x2 && screen_y1 == screen_y2)
+    arcball_angles_struct result;
+    if (vv_is_zero(astate.m_x1 - astate.m_x2) &&
+            vv_is_zero(astate.m_y1 - astate.m_y2))
         return result;
 
-    //double arcball_radius = std::max(_w/2, _h/2);
+    double px1 =  (astate.m_x1 - m_w/2);
+    double py1 =  (astate.m_y1 - m_h/2);
 
-    double px1 =  (screen_x1 - m_w/2);
-    double py1 =  (screen_y1 - m_h/2);
-
-    double px2 =  (screen_x2 - m_w/2);
-    double py2 =  (screen_y2 - m_h/2);
+    double px2 =  (astate.m_x2 - m_w/2);
+    double py2 =  (astate.m_y2 - m_h/2);
 
     double r_p1 = sqrt(px1*px1 + py1*py1);
     double r_p2 = sqrt(px2*px2 + py2*py2);
 
+    if (vv_is_zero(r_p1))
+        return result;
 
-    //double arcball_radius = std::max(r_p1, r_p2);
-    double arcball_radius = r_p1;
-
-    //if (r_p1 > arcball_radius) arcball_radius = r_p1;
-    //if (r_p2 > arcball_radius) arcball_radius = r_p2;
+    double arcball_radius = std::max(r_p1, r_p2);
 
     double pz1 = sqrt(pow(arcball_radius, 2) - r_p1*r_p1);
     double pz2 = sqrt(pow(arcball_radius, 2) - r_p2*r_p2);
@@ -574,27 +563,19 @@ allegro_opengl_project::arcball_angles allegro_opengl_project::get_arcball_angle
     double norm_pz2 = pz2/arcball_radius;
 
 
-    result.arc_x = norm_px2 - norm_px1;
-    result.arc_y = norm_py2 - norm_py1;
-    result.arc_z = norm_pz2 - norm_pz1;
+    result.m_ax = norm_px2 - norm_px1;
+    result.m_ay = norm_py2 - norm_py1;
+    result.m_az = norm_pz2 - norm_pz1;
 
-    const double sign_x = result.arc_x >= 0 ? 1. : -1;
-    const double sign_y = result.arc_y >= 0 ? 1. : -1;
-    const double sign_z = result.arc_z >= 0 ? 1. : -1;
+    const double sign_x = result.m_ax >= 0 ? 1. : -1;
+    const double sign_y = result.m_ay >= 0 ? 1. : -1;
+    const double sign_z = result.m_az >= 0 ? 1. : -1;
 
     const double rot_scale = 3.;
 
-    result.arc_x = rot_scale * sign_x * acos(std::min(1.0,norm_py1*norm_py2 + norm_pz1*norm_pz2));
-    result.arc_y = rot_scale * sign_y * acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));
-    result.arc_z = rot_scale * sign_z * acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));
-
-
-    //if (std::isnan(result.arc_x)) result.arc_x = 0;
-    //if (std::isnan(result.arc_y)) result.arc_y = 0;
-    //if (std::isnan(result.arc_z)) result.arc_z = 0;
-
-//    std::cout << "radius - " << arcball_radius << ";" <<
-//              result.arc_x << ";" << result.arc_y << ";" << result.arc_z << std::endl;
+    result.m_ax = rot_scale * sign_x * acos(std::min(1.0,norm_py1*norm_py2 + norm_pz1*norm_pz2));
+    result.m_ay = rot_scale * sign_y * acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));
+    result.m_az = rot_scale * sign_z * acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));
 
     return result;
 }
@@ -691,6 +672,16 @@ void allegro_opengl_project::camera_frame::translate(double x, double y, double 
 //   _changed_rotation = false;
 //   _changed_translation = false;
 // }
+
+void allegro_opengl_project::camera_frame::debug_info()
+{
+    const auto font  = allegro_opengl_project::get_system_font();
+    const auto color = al_map_rgb(0, 200, 0);
+
+    al_draw_textf(font,color, 10,10, ALLEGRO_ALIGN_LEFT, "%f", get_xa());
+    al_draw_textf(font,color, 10,20, ALLEGRO_ALIGN_LEFT, "%f", get_ya());
+    al_draw_textf(font,color, 10,30, ALLEGRO_ALIGN_LEFT, "%f", get_za());
+}
 
 void allegro_opengl_project::camera_frame::update()
 {

@@ -44,6 +44,7 @@
 		<Unit filename="allegro_project.cpp" />
 		<Unit filename="allegro_project.h" />
 		<Unit filename="test.cpp" />
+		<Unit filename="vv_utils.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

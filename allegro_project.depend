@@ -1,8 +1,9 @@
 # depslib dependency file v1.0
-1569083431 source:/home/vv/allegro_project/allegro_project.cpp
+1569141922 source:/home/vv/allegro_project/allegro_project.cpp
 	"allegro_project.h"
+	"vv_utils.h"
 
-1569083256 /home/vv/allegro_project/allegro_project.h
+1569140236 /home/vv/allegro_project/allegro_project.h
 	<iostream>
 	<algorithm>
 	<cmath>
@@ -15,4 +16,6 @@
 1569075383 source:/home/vv/allegro_project/test.cpp
 	"allegro_project.h"
 	<vector>
+
+1569132770 /home/vv/allegro_project/vv_utils.h
 

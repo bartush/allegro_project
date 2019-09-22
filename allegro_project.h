@@ -24,9 +24,10 @@ public:
     virtual void keyboard_event_handler(const ALLEGRO_EVENT& ev);
     virtual void check_input_state();
     virtual void main_loop();
-    const ALLEGRO_FONT* get_system_font();
+    static const ALLEGRO_FONT* get_system_font();
 
 protected:
+    static ALLEGRO_FONT*   m_system_font;
     ALLEGRO_KEYBOARD_STATE m_keyboard_state;
     ALLEGRO_MOUSE_STATE    m_mouse_state;
     ALLEGRO_MOUSE_STATE    m_prev_mouse_state;
@@ -34,7 +35,6 @@ protected:
     ALLEGRO_EVENT_QUEUE*   m_event_queue   = nullptr;
     ALLEGRO_DISPLAY*       m_display       = nullptr;
     ALLEGRO_TIMER*         m_fps           = nullptr;
-    ALLEGRO_FONT*          m_system_font   = nullptr;
     int                    m_w             = 0;
     int                    m_h             = 0;
 };
@@ -50,14 +50,24 @@ public:
 
     virtual void check_input_state() override;
     virtual void draw_compas();
+    virtual void draw_help_message();
+    virtual void draw_debug_info();
 
-    struct arcball_angles
+    struct arcball_state_struct
     {
-        double arc_x = .0;
-        double arc_y = .0;
-        double arc_z = .0;
+        bool m_started = false;
+        double m_x1 = .0;
+        double m_y1 = .0;
+        double m_x2 = .0;
+        double m_y2 = .0;
     };
-    arcball_angles get_arcball_angles(double screen_x1, double screen_y1, double screen_x2, double screen_y2);
+    struct arcball_angles_struct
+    {
+        double m_ax = .0;
+        double m_ay = .0;
+        double m_az = .0;
+    };
+    arcball_angles_struct get_arcball_angles(const arcball_state_struct &astate);
 
     class camera_frame
     {
@@ -70,6 +80,8 @@ public:
         void translate(double dx, double dy, double dz, bool absolute = false);
         //void apply();
         void update();
+
+        void debug_info();
 
         double get_x();
         double get_y();
