@@ -549,33 +549,58 @@ allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcbal
     if (vv_is_zero(r_p1))
         return result;
 
-    double arcball_radius = std::max(r_p1, r_p2);
+    double arcball_radius = std::max(m_w/2, m_h/2);//std::max(r_p1, r_p2);
+    arcball_radius = std::max(arcball_radius, r_p1);
+    arcball_radius = std::max(arcball_radius, r_p2);
 
     double pz1 = sqrt(pow(arcball_radius, 2) - r_p1*r_p1);
     double pz2 = sqrt(pow(arcball_radius, 2) - r_p2*r_p2);
 
-    double norm_px1 = px1/arcball_radius;
-    double norm_py1 = py1/arcball_radius;
-    double norm_pz1 = pz1/arcball_radius;
+    double dx = px2 - px1;
+    double dy = py2 - py1;
+    double dz = pz2 - pz1;
 
-    double norm_px2 = px2/arcball_radius;
-    double norm_py2 = py2/arcball_radius;
-    double norm_pz2 = pz2/arcball_radius;
+    double dxy = sqrt(pow(px2 - px1, 2) + pow(py2 - py1, 2));
+    double dxz = sqrt(pow(px2 - px1, 2) + pow(pz2 - pz1, 2));
+    double dyz = sqrt(pow(py2 - py1, 2) + pow(pz2 - pz1, 2));
+
+    const double sign_x = dy >= 0 ? 1. : -1;
+    const double sign_y = dx >= 0 ? -1. : 1;
+    const double sign_z = dz >= 0 ? 1. : -1;
+
+    const double rot_scale = 2.;
 
 
-    result.m_ax = norm_px2 - norm_px1;
-    result.m_ay = norm_py2 - norm_py1;
-    result.m_az = norm_pz2 - norm_pz1;
+    double ryz1 = sqrt(py1 * py1 + pz1 * pz1);
+    double ryz2 = sqrt(py2 * py2 + pz2 * pz2);
+    double ax2 = (ryz1 * ryz1 + ryz2 * ryz2 - dyz * dyz) / (2 * ryz1 * ryz2);
+    if (ax2 > 1.) ax2 = 1.;
+    else if (ax2 < .0) ax2 = .0;
+    result.m_ax = rot_scale *sign_x * acos(ax2) * 180 / 3.14;
 
-    const double sign_x = result.m_ax >= 0 ? 1. : -1;
-    const double sign_y = result.m_ay >= 0 ? 1. : -1;
-    const double sign_z = result.m_az >= 0 ? 1. : -1;
+    double rxz1 = sqrt(px1 * px1 + pz1 * pz1);
+    double rxz2 = sqrt(px2 * px2 + pz2 * pz2);
+    double ay2 = (rxz1 * rxz1 + rxz2 * rxz2 - dxz * dxz) / (2 * rxz1 * rxz2);
+    if (ay2 > 1.) ay2 = 1.;
+    else if (ay2 < .0) ay2 = .0;
+    result.m_ay = sign_y * acos(ay2) * 180 / 3.14;
 
-    const double rot_scale = 3.;
+    double rxy1 = sqrt(px1 * px1 + py1 * py1);
+    double rxy2 = sqrt(px2 * px2 + py2 * py2);
+    double az2 = (rxy1 * rxy1 + rxy2 * rxy2 - dxy * dxy) / (2 * rxy1 * rxy2);
+    if (az2 > 1.) az2 = 1.;
+    else if (az2 < .0) az2 = .0;
+    result.m_az = sign_z * acos(az2) * 180 / 3.14;
 
-    result.m_ax = rot_scale * sign_x * acos(std::min(1.0,norm_py1*norm_py2 + norm_pz1*norm_pz2));
-    result.m_ay = rot_scale * sign_y * acos(std::min(1.0,norm_px1*norm_px2 + norm_pz1*norm_pz2));
-    result.m_az = rot_scale * sign_z * acos(std::min(1.0,norm_px1*norm_px2 + norm_py1*norm_py2));
+//    using namespace dlib;
+//    matrix<double, 3, 1> M1, M2;
+//    matrix<double> MS;
+//
+//    M1 = 7,7,7;
+//    M2 = 4,4,4;
+//
+//    MS = M1 + M2;
+
 
     return result;
 }

@@ -55,7 +55,6 @@ public:
 
     struct arcball_state_struct
     {
-        bool m_started = false;
         double m_x1 = .0;
         double m_y1 = .0;
         double m_x2 = .0;
