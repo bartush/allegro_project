@@ -533,6 +533,15 @@ void allegro_opengl_project::draw_compas()
 allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcball_angles(const arcball_state_struct &astate)
 {
     arcball_angles_struct result;
+
+    if (astate.m_x1 > m_w || astate.m_x2 > m_w ||
+            astate.m_y1 > m_h || astate.m_y2 > m_h)
+        return result;
+
+    if (astate.m_x1 < 0. || astate.m_x2 < 0. ||
+            astate.m_y1 < 0. || astate.m_y2 < 0.)
+        return result;
+
     if (vv_is_zero(astate.m_x1 - astate.m_x2) &&
             vv_is_zero(astate.m_y1 - astate.m_y2))
         return result;
@@ -549,7 +558,7 @@ allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcbal
     if (vv_is_zero(r_p1))
         return result;
 
-    double arcball_radius = std::max(m_w/2, m_h/2);//std::max(r_p1, r_p2);
+    double arcball_radius = 2 * std::max(m_w/2, m_h/2);//std::max(r_p1, r_p2);
     arcball_radius = std::max(arcball_radius, r_p1);
     arcball_radius = std::max(arcball_radius, r_p2);
 
@@ -560,47 +569,36 @@ allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcbal
     double dy = py2 - py1;
     double dz = pz2 - pz1;
 
-    double dxy = sqrt(pow(px2 - px1, 2) + pow(py2 - py1, 2));
-    double dxz = sqrt(pow(px2 - px1, 2) + pow(pz2 - pz1, 2));
-    double dyz = sqrt(pow(py2 - py1, 2) + pow(pz2 - pz1, 2));
+    vv_geom::vec3 v1 = {px1, py1, pz1};
+    vv_geom::vec3 v2 = {px2, py2, pz2};
 
-    const double sign_x = dy >= 0 ? 1. : -1;
-    const double sign_y = dx >= 0 ? -1. : 1;
-    const double sign_z = dz >= 0 ? 1. : -1;
+    vv_geom::vec3 vdir = v2 - v1;
+    vv_geom::vec3 vnorm = vv_geom::cross_product(v1, vdir);
 
-    const double rot_scale = 2.;
+    double dxy = sqrt(dx * dx + dy * dy);
+    double dxz = sqrt(dx * dx + dz * dz);
+    double dyz = sqrt(dy * dy + dz * dz);
 
+    const double sign_x = vnorm.x > 0 ? -1 : 1;;
+    const double sign_y = vnorm.y > 0 ? 1 : -1;;
+    const double sign_z = vnorm.z > 0 ? 1 : -1;
+
+    const double rot_scale = 8.;
 
     double ryz1 = sqrt(py1 * py1 + pz1 * pz1);
     double ryz2 = sqrt(py2 * py2 + pz2 * pz2);
     double ax2 = (ryz1 * ryz1 + ryz2 * ryz2 - dyz * dyz) / (2 * ryz1 * ryz2);
-    if (ax2 > 1.) ax2 = 1.;
-    else if (ax2 < .0) ax2 = .0;
-    result.m_ax = rot_scale *sign_x * acos(ax2) * 180 / 3.14;
+    result.m_ax = rot_scale * sign_x * acos(ax2) * 180 / 3.14;
 
     double rxz1 = sqrt(px1 * px1 + pz1 * pz1);
     double rxz2 = sqrt(px2 * px2 + pz2 * pz2);
     double ay2 = (rxz1 * rxz1 + rxz2 * rxz2 - dxz * dxz) / (2 * rxz1 * rxz2);
-    if (ay2 > 1.) ay2 = 1.;
-    else if (ay2 < .0) ay2 = .0;
-    result.m_ay = sign_y * acos(ay2) * 180 / 3.14;
+    result.m_ay = rot_scale * sign_y * acos(ay2) * 180 / 3.14;
 
     double rxy1 = sqrt(px1 * px1 + py1 * py1);
     double rxy2 = sqrt(px2 * px2 + py2 * py2);
     double az2 = (rxy1 * rxy1 + rxy2 * rxy2 - dxy * dxy) / (2 * rxy1 * rxy2);
-    if (az2 > 1.) az2 = 1.;
-    else if (az2 < .0) az2 = .0;
-    result.m_az = sign_z * acos(az2) * 180 / 3.14;
-
-//    using namespace dlib;
-//    matrix<double, 3, 1> M1, M2;
-//    matrix<double> MS;
-//
-//    M1 = 7,7,7;
-//    M2 = 4,4,4;
-//
-//    MS = M1 + M2;
-
+    //result.m_az = sign_z * acos(az2) * 180 / 3.14;
 
     return result;
 }
