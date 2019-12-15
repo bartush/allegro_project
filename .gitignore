@@ -2,5 +2,6 @@
 *.depend
 *.layout
 .gitignore~
+*.user
 /bin
 /obj
