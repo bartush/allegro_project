@@ -73,7 +73,8 @@ void allegro_project::init(int display_flags)
         throw "couldn't init image addon!";
 
     al_init_font_addon();
-    m_system_font = al_create_builtin_font();
+    al_init_ttf_addon();
+    m_system_font = al_load_ttf_font("pirulen.ttf", 10, 0);//al_create_builtin_font();
     if (!m_system_font)
         throw "system font is not initialized!";
 
