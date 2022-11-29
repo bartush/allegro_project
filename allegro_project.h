@@ -40,6 +40,7 @@ protected:
     int                    m_h             = 0;
 };
 
+#ifdef ALLEGRO_PROJECT_OPENGL
 class allegro_opengl_project : public allegro_project
 {
 public:
@@ -124,6 +125,7 @@ protected:
     virtual void enable_global_lighting();
     virtual void disable_global_lighting();
 };
+#endif
 
 // utility macros
 

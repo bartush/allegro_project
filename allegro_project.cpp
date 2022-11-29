@@ -61,6 +61,9 @@ void allegro_project::init(int display_flags)
     // Set display flags
     al_set_new_display_flags(display_flags);
 
+    // Set depth buffer size GLX_DEPTH_SIZE
+    al_set_new_display_option(ALLEGRO_DEPTH_SIZE, 16, ALLEGRO_SUGGEST);
+
     // Enable antialiasing
     al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 2, ALLEGRO_SUGGEST);
     al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
@@ -201,6 +204,7 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
     return m_system_font;
 }
 
+#ifdef ALLEGRO_PROJECT_OPENGL
 // allegro_opengl_project implementation ////////////////////////////////
 
 void allegro_opengl_project::create_display(int w, int h)
@@ -277,8 +281,8 @@ void allegro_opengl_project::check_input_state()
 
         bool zero_arcball_angles =
             vv_is_zero(arcball.m_ax) &&
-            vv_is_zero(arcball.m_ay) == .0 &&
-            vv_is_zero(arcball.m_az) == .0;
+            vv_is_zero(arcball.m_ay) &&
+            vv_is_zero(arcball.m_az);
 
         if (!zero_arcball_angles)
             m_camera.rotate(arcball.m_ax * rot_scale, arcball.m_ay * rot_scale, arcball.m_az * rot_scale);
@@ -314,6 +318,7 @@ void allegro_opengl_project::render()
         {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
         {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0}
     };
+
     GLint faces[6][4] =    // vertex indices for the 6 faces of a cube
     {
         {0, 1, 2, 3}, {3, 2, 6, 7}, {7, 6, 5, 4},
@@ -446,9 +451,7 @@ void allegro_opengl_project::draw_compas()
     glDisable(GL_DEPTH_TEST);
     glPopMatrix();
 
-
     //draw axes labels
-
     ALLEGRO_TRANSFORM TX, TY, TZ, TTX, TTY, TTZ, TRX, TRY, TRZ, TS;
     al_identity_transform(&TX);
     al_identity_transform(&TY);
@@ -580,8 +583,8 @@ allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcbal
     double dxz = sqrt(dx * dx + dz * dz);
     double dyz = sqrt(dy * dy + dz * dz);
 
-    const double sign_x = vnorm.x > 0 ? -1 : 1;;
-    const double sign_y = vnorm.y > 0 ? 1 : -1;;
+    const double sign_x = vnorm.x > 0 ? -1 : 1;
+    const double sign_y = vnorm.y > 0 ? 1 : -1;
     const double sign_z = vnorm.z > 0 ? 1 : -1;
 
     const double rot_scale = 8.;
@@ -599,7 +602,7 @@ allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcbal
     double rxy1 = sqrt(px1 * px1 + py1 * py1);
     double rxy2 = sqrt(px2 * px2 + py2 * py2);
     double az2 = (rxy1 * rxy1 + rxy2 * rxy2 - dxy * dxy) / (2 * rxy1 * rxy2);
-    //result.m_az = sign_z * acos(az2) * 180 / 3.14;
+    result.m_az = -sign_z * acos(az2) * 180 / 3.14;
 
     return result;
 }
@@ -764,3 +767,4 @@ float allegro_opengl_project::camera_frame::get_za_radians()
 {
     return m_za * std::acos(-1) / 180;
 }
+#endif

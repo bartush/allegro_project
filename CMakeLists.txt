@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 
 project(allegro_project)
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_LIST_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(SOURCES allegro_project.cpp test.cpp)
-set(ALLEGRO_PROJECT_LIBS -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_ttf.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so)
+#set(ALLEGRO_PROJECT_LIBS -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_ttf.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -mwindows -O0")
+set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_color -lallegro_image)
+add_compile_definitions(ALLEGRO_PROJECT_OPENGL)
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} ${ALLEGRO_PROJECT_LIBS})
 
