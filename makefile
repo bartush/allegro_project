@@ -1,11 +1,11 @@
 #linux
-CPPFLAGS=-std=gnu++11 -Wall -O3 -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so
+#CPPFLAGS=-std=gnu++11 -Wall -O3 -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so
 #-Wl,--stack,8388608
 #-Wno-write-strings
 
 #win
-#CPPFLAGS=-std=gnu++11 -Wall -O3 -lopengl32 -lglu32 -lallegro_monolith
-
+# -mwindows flag to disable running terminal
+CPPFLAGS=-std=gnu++11 -Wall -mwindows -O3 -lopengl32 -lglu32 -lallegro -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_color -lallegro_image
 
 SRC=allegro_project.cpp test.cpp
 

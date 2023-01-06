@@ -1,4 +1,6 @@
 #include "allegro_project.h"
+#include "imgui.h"
+#include "imgui_impl_allegro5.h"
 #include "vv_utils.h"
 
 
@@ -8,6 +10,11 @@ allegro_project::allegro_project() {}
 
 allegro_project::~allegro_project()
 {
+    if (m_imgui_enabled)
+    {
+        ImGui_ImplAllegro5_Shutdown();
+        ImGui::DestroyContext();
+    }
     if (m_display)
     {
         al_destroy_display(m_display);
@@ -32,10 +39,11 @@ allegro_project::~allegro_project()
     }
 }
 
-void allegro_project::init(int display_flags)
+void allegro_project::init(int display_flags, bool enable_imgui)
 {
     BEGIN_EXCEPTION_CATCH()
     // Basic initialization
+    m_imgui_enabled = enable_imgui;
     if (!al_init())
         throw "couldn't init allegro!";
 
@@ -77,9 +85,18 @@ void allegro_project::init(int display_flags)
 
     al_init_font_addon();
     al_init_ttf_addon();
-    m_system_font = al_load_ttf_font("pirulen.ttf", 10, 0);//al_create_builtin_font();
+    m_system_font = al_load_ttf_font("basis33.ttf"/*"pirulen.ttf"*/, 16, 0);//al_create_builtin_font();
     if (!m_system_font)
         throw "system font is not initialized!";
+
+    if (m_imgui_enabled)
+    {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        io.Fonts->AddFontFromFileTTF("basis33.ttf", 16, nullptr, io.Fonts->GetGlyphRangesCyrillic());
+        ImGui::StyleColorsDark();
+    }
 
     m_init = true;
     END_EXCEPTION_CATCH();
@@ -99,19 +116,45 @@ void allegro_project::create_display(int w, int h)
 
     al_register_event_source(m_event_queue, al_get_display_event_source(m_display));
     display_resize(w, h);
+
+    if (m_imgui_enabled)
+        ImGui_ImplAllegro5_Init(m_display);
+
     END_EXCEPTION_CATCH()
 }
 
-void allegro_project::pre_render() {}
+void allegro_project::pre_render()
+{
+    if (m_imgui_enabled)
+    {
+        ImGui_ImplAllegro5_NewFrame();
+        ImGui::NewFrame();
+    }
+}
 
 void allegro_project::render()
 {
-    al_clear_to_color(al_map_rgb(0,0,255*0.2));
-    al_draw_textf(m_system_font, al_map_rgb(0, 255, 0), m_w/2, m_h/2,
-                  ALLEGRO_ALIGN_CENTER, "%s", "TEST");
+    if (m_imgui_enabled)
+        imgui_render();
+    else
+        al_clear_to_color(al_map_rgb(0, 148, 204));
 }
 
-void allegro_project::post_render() {}
+void allegro_project::post_render()
+{
+    if (m_imgui_enabled)
+    {
+        ImGui::End();
+        ImGui::Render();
+        ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
+    }
+}
+
+void allegro_project::imgui_render()
+{
+    if (!m_imgui_enabled)
+        return;
+}
 
 bool allegro_project::init_fps_timer(double speed_sec)
 {
@@ -139,6 +182,7 @@ void allegro_project::keyboard_event_handler(const ALLEGRO_EVENT& ev)
 void allegro_project::check_input_state()
 {
     m_prev_mouse_state = m_mouse_state;
+    m_prev_keyboard_state = m_keyboard_state;
     al_get_mouse_state(&m_mouse_state);
     al_get_keyboard_state(&m_keyboard_state);
 }
@@ -161,6 +205,8 @@ void allegro_project::main_loop()
     while (true)
     {
         al_wait_for_event(m_event_queue, &ev);
+        if (m_imgui_enabled)
+            ImGui_ImplAllegro5_ProcessEvent(&ev);
         switch (ev.type)
         {
         case ALLEGRO_EVENT_TIMER:
@@ -181,11 +227,17 @@ void allegro_project::main_loop()
         {
             al_acknowledge_resize(ev.display.source);
             display_resize(ev.display.width, ev.display.height);
+            if (m_imgui_enabled)
+            {
+                ImGui_ImplAllegro5_InvalidateDeviceObjects();
+                ImGui_ImplAllegro5_CreateDeviceObjects();
+            }
             break;
         }
         default:
             break;
         }
+
         if (drawing_enabled && al_event_queue_is_empty(m_event_queue))
         {
             drawing_enabled = false;
@@ -204,8 +256,20 @@ const ALLEGRO_FONT* allegro_project::get_system_font()
     return m_system_font;
 }
 
+void allegro_project::allegro_check_version()
+{
+    uint32_t version = al_get_allegro_version();
+    int major = version >> 24;
+    int minor = (version >> 16) & 255;
+    int revision = (version >> 8) & 255;
+    int release = version & 255;
+    std::cout << std::endl << "allegro version: " << major << "." << minor << "." << revision << "." << release << std::endl;
+}
+
 #ifdef ALLEGRO_PROJECT_OPENGL
 // allegro_opengl_project implementation ////////////////////////////////
+
+static bool g_show_demo_window(false);
 
 void allegro_opengl_project::create_display(int w, int h)
 {
@@ -241,6 +305,15 @@ void allegro_opengl_project::check_input_state()
         m_camera.reset();
         m_camera.translate(0, 0, -10);
         m_camera.rotate(180, 0, 0);
+    }
+
+    if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RCTRL) ||
+            al_key_down(&m_keyboard_state, ALLEGRO_KEY_LCTRL))
+    {
+        //show ImGui demo window
+        if (!al_key_down(&m_prev_keyboard_state, ALLEGRO_KEY_D) &&
+                al_key_down(&m_keyboard_state, ALLEGRO_KEY_D))
+            g_show_demo_window = !g_show_demo_window;
     }
 
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_UP))
@@ -298,9 +371,11 @@ void allegro_opengl_project::check_input_state()
 
 void allegro_opengl_project::pre_render()
 {
+    allegro_project::pre_render();
+
     glPushMatrix(); // save 2d world matrix
 
-    glClearColor(0.0, 0.0, 0.2, 1);
+    //glClearColor(0.0, 0.0, 0.2, 1);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glShadeModel(GL_SMOOTH);
@@ -313,6 +388,8 @@ void allegro_opengl_project::pre_render()
 
 void allegro_opengl_project::render()
 {
+    allegro_project::render();
+
     GLfloat n[6][3] =      // normals for the 6 faces of a cube
     {
         {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
@@ -368,7 +445,7 @@ void allegro_opengl_project::draw_help_message()
 
 void allegro_opengl_project::draw_debug_info()
 {
-    m_camera.debug_info();
+    m_camera.debug_info(m_w - 15, m_h -40);
 }
 
 void allegro_opengl_project::post_render()
@@ -381,6 +458,44 @@ void allegro_opengl_project::post_render()
     draw_compas();
     draw_help_message();
     draw_debug_info();
+    allegro_project::post_render();
+}
+
+void allegro_opengl_project::imgui_render()
+{
+    allegro_project::imgui_render();
+    if (!m_imgui_enabled)
+        return;
+
+    static ImVec4 clear_color = ImVec4(0.0f, 0.55f, 0.80f, 1.00f);
+    if (g_show_demo_window)
+        ImGui::ShowDemoWindow(&g_show_demo_window);
+
+    ImGuiWindowFlags window_flags = 0;
+    window_flags |= ImGuiWindowFlags_NoSavedSettings;
+    window_flags |= ImGuiWindowFlags_NoMove;
+    const char* window_name = u8"Вид";
+    ImGui::Begin(window_name, nullptr, window_flags);
+    ImGui::PushItemWidth(-FLT_MIN);
+    ImGui::SetWindowPos(window_name, {0.,0.});
+
+    float xa = m_camera.get_xa_radians();
+    float ya = m_camera.get_ya_radians();
+    float za = m_camera.get_za_radians();
+    ImGui::Text(u8"angle X"); ImGui::SameLine(); ImGui::SliderAngle("ax", &xa, -180.f, +180.f);
+    ImGui::Text(u8"angle Y"); ImGui::SameLine(); ImGui::SliderAngle("ay", &ya, -180.f, +180.f);
+    ImGui::Text(u8"angle Z"); ImGui::SameLine(); ImGui::SliderAngle("az", &za, -180.f, +180.f);
+    m_camera.set_xa(xa * 180 / std::acos(-1));
+    m_camera.set_ya(ya * 180 / std::acos(-1));
+    m_camera.set_za(za * 180 / std::acos(-1));
+
+    ImGui::ColorEdit3("bkgnd color", (float *)&clear_color);
+
+    ImGui::PopItemWidth();
+
+    al_clear_to_color(al_map_rgb(clear_color.x * 255,
+                                 clear_color.y * 255,
+                                 clear_color.z * 255));
 }
 
 void allegro_opengl_project::enable_global_lighting()
@@ -700,14 +815,14 @@ void allegro_opengl_project::camera_frame::translate(double x, double y, double 
 //   _changed_translation = false;
 // }
 
-void allegro_opengl_project::camera_frame::debug_info()
+void allegro_opengl_project::camera_frame::debug_info(int x, int y)
 {
     const auto font  = allegro_opengl_project::get_system_font();
     const auto color = al_map_rgb(0, 200, 0);
 
-    al_draw_textf(font,color, 10,10, ALLEGRO_ALIGN_LEFT, "%f", get_xa());
-    al_draw_textf(font,color, 10,20, ALLEGRO_ALIGN_LEFT, "%f", get_ya());
-    al_draw_textf(font,color, 10,30, ALLEGRO_ALIGN_LEFT, "%f", get_za());
+    al_draw_textf(font, color, x, y, ALLEGRO_ALIGN_RIGHT, "%f", get_xa());
+    al_draw_textf(font, color, x, y + 10, ALLEGRO_ALIGN_RIGHT, "%f", get_ya());
+    al_draw_textf(font, color, x, y + 20, ALLEGRO_ALIGN_RIGHT, "%f", get_za());
 }
 
 void allegro_opengl_project::camera_frame::update()
@@ -733,36 +848,27 @@ double allegro_opengl_project::camera_frame::get_x()
 {
     return m_x;
 }
+
 double allegro_opengl_project::camera_frame::get_y()
 {
     return m_y;
 }
+
 double allegro_opengl_project::camera_frame::get_z()
 {
     return m_z;
-}
-
-double allegro_opengl_project::camera_frame::get_xa()
-{
-    return m_xa;
-}
-double allegro_opengl_project::camera_frame::get_ya()
-{
-    return m_ya;
-}
-double allegro_opengl_project::camera_frame::get_za()
-{
-    return m_za;
 }
 
 float allegro_opengl_project::camera_frame::get_xa_radians()
 {
     return m_xa * std::acos(-1) / 180;
 }
+
 float allegro_opengl_project::camera_frame::get_ya_radians()
 {
     return m_ya * std::acos(-1) / 180;
 }
+
 float allegro_opengl_project::camera_frame::get_za_radians()
 {
     return m_za * std::acos(-1) / 180;
