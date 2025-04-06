@@ -85,7 +85,7 @@ void allegro_project::init(int display_flags, bool enable_imgui)
 
     al_init_font_addon();
     al_init_ttf_addon();
-    m_system_font = al_load_ttf_font("basis33.ttf", 16, 0);
+    m_system_font = al_load_ttf_font("basis33.ttf"/*"pirulen.ttf"*/, 16, 0);//al_create_builtin_font();
     if (!m_system_font)
         throw "system font is not initialized!";
 
@@ -506,7 +506,7 @@ void allegro_opengl_project::imgui_render()
     ImGuiWindowFlags window_flags = 0;
     window_flags |= ImGuiWindowFlags_NoSavedSettings;
     window_flags |= ImGuiWindowFlags_NoMove;
-    const char* window_name = u8"Вид";
+    const char* window_name = u8"Р’РёРґ";
     ImGui::Begin(window_name, nullptr, window_flags);
     ImGui::PushItemWidth(-FLT_MIN);
     ImGui::SetWindowPos(window_name, {0.,0.});
