@@ -1,0 +1,42 @@
+[
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\allegro_project.cpp.obj -c C:\\msys64\\home\\vv\\allegro_project\\allegro_project.cpp",
+  "file": "C:\\msys64\\home\\vv\\allegro_project\\allegro_project.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\test.cpp.obj -c C:\\msys64\\home\\vv\\allegro_project\\test.cpp",
+  "file": "C:\\msys64\\home\\vv\\allegro_project\\test.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\backends\\imgui_impl_allegro5.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\backends\\imgui_impl_allegro5.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\backends\\imgui_impl_allegro5.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\imgui.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\imgui.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\imgui.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\imgui_draw.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\imgui_draw.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\imgui_draw.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\imgui_demo.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\imgui_demo.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\imgui_demo.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\imgui_tables.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\imgui_tables.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\imgui_tables.cpp"
+},
+{
+  "directory": "C:/msys64/home/vv/allegro_project",
+  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DALLEGRO_PROJECT_OPENGL -DIMGUI_USER_CONFIG=\\\"C:/msys64/home/vv/imgui/examples/example_allegro5/imconfig_allegro5.h\\\" -IC:/msys64/home/vv/imgui -IC:/msys64/home/vv/imgui/backends  -std=gnu++11 -Wall -mwindows -O0 -o CMakeFiles\\allegro_project.dir\\C_\\msys64\\home\\vv\\imgui\\imgui_widgets.cpp.obj -c C:\\msys64\\home\\vv\\imgui\\imgui_widgets.cpp",
+  "file": "C:\\msys64\\home\\vv\\imgui\\imgui_widgets.cpp"
+}
+]
