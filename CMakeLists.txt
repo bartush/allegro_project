@@ -13,8 +13,7 @@ set(SOURCES allegro_project.cpp test.cpp
 
 #set(ALLEGRO_PROJECT_LIBS -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_ttf.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -mwindows -O0")
-#set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_color -lallegro_image)
-set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro_monolith)
+set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_color -lallegro_image)
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME}
  PUBLIC
@@ -23,11 +22,6 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} ${ALLEGRO_PROJECT_LIBS})
 add_compile_definitions(ALLEGRO_PROJECT_OPENGL)
 add_compile_definitions(IMGUI_USER_CONFIG=\"$ENV{IMGUI_FOLDER}/examples/example_allegro5/imconfig_allegro5.h\")
-
-#add_custom_command(
-#  TARGET ${PROJECT_NAME} POST_BUILD
-#  COMMAND allegro_project.exe
-#  VERBATIM)
 
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
