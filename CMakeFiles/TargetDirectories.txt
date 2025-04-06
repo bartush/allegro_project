@@ -1,3 +1,0 @@
-C:/dev/allegro_project/CMakeFiles/allegro_project.dir
-C:/dev/allegro_project/CMakeFiles/edit_cache.dir
-C:/dev/allegro_project/CMakeFiles/rebuild_cache.dir

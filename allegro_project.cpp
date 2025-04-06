@@ -50,7 +50,7 @@ void allegro_project::init(int display_flags, bool enable_imgui)
     m_event_queue = al_create_event_queue();
     if (!m_event_queue)
         throw "couldn't start event queue!";
- 
+
     if (!init_fps_timer())
         throw "couldn't init timer!";
     al_start_timer(m_fps);
@@ -85,7 +85,7 @@ void allegro_project::init(int display_flags, bool enable_imgui)
 
     al_init_font_addon();
     al_init_ttf_addon();
-    m_system_font = al_load_ttf_font("basis33.ttf", 16, 0);
+    m_system_font = al_load_ttf_font("basis33.ttf"/*"pirulen.ttf"*/, 16, 0);//al_create_builtin_font();
     if (!m_system_font)
         throw "system font is not initialized!";
 
@@ -270,17 +270,13 @@ void allegro_project::allegro_check_version()
 // allegro_opengl_project implementation ////////////////////////////////
 
 static bool g_show_demo_window(false);
-bool allegro_opengl_project::draw_state_flags::m_shaded    = false;
-bool allegro_opengl_project::draw_state_flags::m_wireframe = false;
-bool allegro_opengl_project::draw_state_flags::m_compas    = false;
-bool allegro_opengl_project::draw_state_flags::m_coord_sys = false;
 
 void allegro_opengl_project::create_display(int w, int h)
 {
     allegro_project::create_display(w, h);
     display_resize(w, h);
     m_camera.translate(0, 0, -10);
-    //m_camera.rotate(180, 0, 0);
+    m_camera.rotate(180, 0, 0);
 }
 
 void allegro_opengl_project::display_resize(int w, int h)
@@ -308,7 +304,7 @@ void allegro_opengl_project::check_input_state()
     {
         m_camera.reset();
         m_camera.translate(0, 0, -10);
-        //m_camera.rotate(180, 0, 0);
+        m_camera.rotate(180, 0, 0);
     }
 
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RCTRL) ||
@@ -393,8 +389,44 @@ void allegro_opengl_project::pre_render()
 void allegro_opengl_project::render()
 {
     allegro_project::render();
-    draw_box();
-    draw_coord_system();
+
+    GLfloat n[6][3] =      // normals for the 6 faces of a cube
+    {
+        {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
+        {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0}
+    };
+
+    GLint faces[6][4] =    // vertex indices for the 6 faces of a cube
+    {
+        {0, 1, 2, 3}, {3, 2, 6, 7}, {7, 6, 5, 4},
+        {4, 5, 1, 0}, {5, 6, 2, 1}, {7, 4, 0, 3}
+    };
+    GLfloat v[8][3];
+
+    v[0][0] = v[1][0] = v[2][0] = v[3][0] = -1;
+    v[4][0] = v[5][0] = v[6][0] = v[7][0] = 1;
+    v[0][1] = v[1][1] = v[4][1] = v[5][1] = -1;
+    v[2][1] = v[3][1] = v[6][1] = v[7][1] = 1;
+    v[0][2] = v[3][2] = v[4][2] = v[7][2] = 1;
+    v[1][2] = v[2][2] = v[5][2] = v[6][2] = -1;
+
+    GLfloat red_dif[]= {0.9,  0.0, 0.0, 1.0};
+    GLfloat red_amb[]= {0.4,  0.0, 0.0, 1.0};
+    GLfloat red_spe[]= {0.0,  0.0, 0.0, 1.0};
+
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, red_dif);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, red_amb);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, red_spe);
+    for (int i = 0; i < 6; i++)
+    {
+        glBegin(GL_QUADS);
+        glNormal3fv(&n[i][0]);
+        glVertex3fv(&v[faces[i][0]][0]);
+        glVertex3fv(&v[faces[i][1]][0]);
+        glVertex3fv(&v[faces[i][2]][0]);
+        glVertex3fv(&v[faces[i][3]][0]);
+        glEnd();
+    }
 }
 
 void allegro_opengl_project::draw_help_message()
@@ -414,70 +446,6 @@ void allegro_opengl_project::draw_help_message()
 void allegro_opengl_project::draw_debug_info()
 {
     m_camera.debug_info(m_w - 15, m_h -40);
-}
-
-void allegro_opengl_project::draw_box()
-{
-    double len = 1.;
-
-    GLfloat n[6][3] =      // normals for the 6 faces of a cube
-    {
-        {-1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0},
-        {0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, -1.0}
-    };
-
-    GLint faces[6][4] =    // vertex indices for the 6 faces of a cube
-    {
-        {0, 1, 2, 3}, {3, 2, 6, 7}, {7, 6, 5, 4},
-        {4, 5, 1, 0}, {5, 6, 2, 1}, {7, 4, 0, 3}
-    };
-    GLfloat v[8][3];
-
-    v[0][0] = v[1][0] = v[2][0] = v[3][0] = -len;
-    v[4][0] = v[5][0] = v[6][0] = v[7][0] = len;
-    v[0][1] = v[1][1] = v[4][1] = v[5][1] = -len;
-    v[2][1] = v[3][1] = v[6][1] = v[7][1] = len;
-    v[0][2] = v[3][2] = v[4][2] = v[7][2] = len;
-    v[1][2] = v[2][2] = v[5][2] = v[6][2] = -len;
-
-    if(draw_state_flags::m_shaded)
-    {
-        GLfloat red_dif[]= {0.9,  0.0, 0.0, 1.0};
-        GLfloat red_amb[]= {0.4,  0.0, 0.0, 1.0};
-        GLfloat red_spe[]= {0.0,  0.0, 0.0, 1.0};
-
-        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, red_dif);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, red_amb);
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, red_spe);
-        for (int i = 0; i < 6; i++)
-        {
-            glBegin(GL_QUADS);
-            glNormal3fv(&n[i][0]);
-            glVertex3fv(&v[faces[i][0]][0]);
-            glVertex3fv(&v[faces[i][1]][0]);
-            glVertex3fv(&v[faces[i][2]][0]);
-            glVertex3fv(&v[faces[i][3]][0]);
-            glEnd();
-        }
-    }
-
-    if(draw_state_flags::m_wireframe)
-    {
-        disable_global_lighting();
-        glColor3f(0.0, 1.0, 1.0);
-        glLineWidth(3);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0, 1.0);
-        for (int i = 0; i < 6; i++)
-        {
-            glBegin(GL_LINE_LOOP);
-            glVertex3fv(&v[faces[i][0]][0]);
-            glVertex3fv(&v[faces[i][1]][0]);
-            glVertex3fv(&v[faces[i][2]][0]);
-            glVertex3fv(&v[faces[i][3]][0]);
-            glEnd();
-        }
-    }
 }
 
 void allegro_opengl_project::post_render()
@@ -511,10 +479,6 @@ void allegro_opengl_project::imgui_render()
     ImGui::PushItemWidth(-FLT_MIN);
     ImGui::SetWindowPos(window_name, {0.,0.});
 
-    ImGui::Checkbox("shaded", &draw_state_flags::m_shaded);
-    ImGui::Checkbox("wireframe", &draw_state_flags::m_wireframe);
-    ImGui::Checkbox("compas", &draw_state_flags::m_compas);
-    ImGui::Checkbox("coord system", &draw_state_flags::m_coord_sys);
     float xa = m_camera.get_xa_radians();
     float ya = m_camera.get_ya_radians();
     float za = m_camera.get_za_radians();
@@ -555,8 +519,6 @@ void allegro_opengl_project::disable_global_lighting()
 
 void allegro_opengl_project::draw_compas()
 {
-    if (!draw_state_flags::m_compas)
-        return;
     int compas_size = 60;
     int axis_length = 35;
     int text_offset = 12;
@@ -570,15 +532,14 @@ void allegro_opengl_project::draw_compas()
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    //glOrtho(0, m_w, m_h, 0, -compas_size, compas_size);
-    glOrtho(0, m_w, 0, m_h, -compas_size, compas_size);
+    glOrtho(0, m_w, m_h, 0, -compas_size, compas_size);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslated(m_w - compas_size, m_h - compas_size, 0);
+    glTranslated(m_w - compas_size, compas_size, 0);
     glRotated(m_camera.get_xa(), 1, 0, 0);
-    glRotated(m_camera.get_ya(), 0, 1, 0);
+    glRotated(-m_camera.get_ya(), 0, 1, 0);
     glRotated(m_camera.get_za(), 0, 0, 1);
     glScaled(1, 1, 1);
 
@@ -620,10 +581,10 @@ void allegro_opengl_project::draw_compas()
 
     al_rotate_transform_3d(&TRX, 1, 0, 0, m_camera.get_xa_radians());
     al_rotate_transform_3d(&TRY, 0, 1, 0, m_camera.get_ya_radians());
-    al_rotate_transform_3d(&TRZ, 0, 0, 1, m_camera.get_za_radians());
+    al_rotate_transform_3d(&TRZ, 0, 0, -1, m_camera.get_za_radians());
     al_translate_transform_3d(&TTX, 1, 0, 0);
-    al_translate_transform_3d(&TTY, 0, 1, 0);
-    al_translate_transform_3d(&TTZ, 0, 0, 1);
+    al_translate_transform_3d(&TTY, 0, -1, 0);
+    al_translate_transform_3d(&TTZ, 0, 0, -1);
     al_scale_transform_3d(&TS,
                           axis_length + text_offset,
                           axis_length + text_offset,
@@ -686,38 +647,6 @@ void allegro_opengl_project::draw_compas()
                   compas_size - z_label.y, // y cord
                   ALLEGRO_ALIGN_LEFT,
                   "%s", "Z");
-}
-
-void allegro_opengl_project::draw_coord_system()
-{
-    if (!draw_state_flags::m_coord_sys)
-        return;
-
-    int axis_length = 1;
-    glPushMatrix();
-    glScaled(0.3, 0.3, 0.3);
-    glLineWidth(3);
-
-    disable_global_lighting();
-    glColor3f(1.0, 0.0, 0.0);
-    glBegin(GL_LINES);   // x-axis
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(axis_length, 0, 0);
-    glEnd();
-
-    glColor3f(0.0, 1.0, 0.0);
-    glBegin(GL_LINES);  // y-axis
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0, axis_length, 0);
-    glEnd();
-
-    glColor3f(0.0, 0.0, 1.0);
-    glBegin(GL_LINES);  // z-axis
-    glVertex3f(0.0, 0.0, 0.0);
-    glVertex3f(0, 0, axis_length);
-    glEnd();
-
-    glPopMatrix();
 }
 
 allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcball_angles(const arcball_state_struct &astate)
