@@ -56,18 +56,8 @@ public:
     virtual void imgui_render() override;
     virtual void check_input_state() override;
     virtual void draw_compas();
-    virtual void draw_coord_system();
     virtual void draw_help_message();
     virtual void draw_debug_info();
-    void draw_box();
-
-    struct draw_state_flags
-    {
-        static bool m_shaded;
-        static bool m_wireframe;
-        static bool m_compas;
-        static bool m_coord_sys;
-    };
 
     struct arcball_state_struct
     {

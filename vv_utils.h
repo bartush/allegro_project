@@ -13,6 +13,7 @@ inline bool vv_is_zero(double val)
     return vv_abs(val) < g_vv_tolerance;
 }
 
+
 namespace vv_geom
 {
     struct vec3
