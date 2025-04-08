@@ -1,7 +1,7 @@
+#include "vv_utils.h"
 #include "allegro_project.h"
 #include "imgui.h"
 #include "imgui_impl_allegro5.h"
-#include "vv_utils.h"
 
 
 ALLEGRO_FONT* allegro_project::m_system_font = nullptr;
@@ -50,7 +50,6 @@ void allegro_project::init(int display_flags, bool enable_imgui)
     m_event_queue = al_create_event_queue();
     if (!m_event_queue)
         throw "couldn't start event queue!";
- 
     if (!init_fps_timer())
         throw "couldn't init timer!";
     al_start_timer(m_fps);
@@ -294,8 +293,8 @@ void allegro_opengl_project::check_input_state()
 {
     allegro_project::check_input_state();
 
+    double rot_scale = 1.0;
     const double zoom_scale = 0.5;
-    const double rot_scale = 0.2;
     const double pan_scale = 0.01;
 
     double dx = m_prev_mouse_state.x - m_mouse_state.x;
@@ -321,14 +320,13 @@ void allegro_opengl_project::check_input_state()
     }
 
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_UP))
-        m_camera.rotate(-1, 0, 0);
+        m_camera.apply_rotation(vv_geom::quat::from_axis_angle({1.0, 0.0, 0.0}, -M_PI / 180 * rot_scale));
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_DOWN))
-        m_camera.rotate(+1, 0, 0);
+        m_camera.apply_rotation(vv_geom::quat::from_axis_angle({1.0, 0.0, 0.0}, M_PI / 180 * rot_scale));
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_LEFT))
-        m_camera.rotate(0, +1, 0);
-
+        m_camera.apply_rotation(vv_geom::quat::from_axis_angle({0.0, 1.0, 0.0}, -M_PI / 180 * rot_scale));
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RIGHT))
-        m_camera.rotate(0, -1, 0);
+        m_camera.apply_rotation(vv_geom::quat::from_axis_angle({0.0, 1.0, 0.0}, M_PI / 180 * rot_scale));
 
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RSHIFT) ||
             al_key_down(&m_keyboard_state, ALLEGRO_KEY_LSHIFT))
@@ -341,7 +339,6 @@ void allegro_opengl_project::check_input_state()
             m_camera.translate(-0.2, 0, 0);
         if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_RIGHT))
             m_camera.translate(+0.2, 0, 0);
-
         if (al_mouse_button_down(&m_prev_mouse_state, 3) && al_mouse_button_down(&m_mouse_state, 3))
             m_camera.translate(-dx * pan_scale, dy * pan_scale, 0);
     }
@@ -353,18 +350,8 @@ void allegro_opengl_project::check_input_state()
         astate.m_x2 = m_mouse_state.x;
         astate.m_y2 = m_mouse_state.y;
 
-        arcball_angles_struct arcball =
-            get_arcball_angles(astate);
-
-        bool zero_arcball_angles =
-            vv_is_zero(arcball.m_ax) &&
-            vv_is_zero(arcball.m_ay) &&
-            vv_is_zero(arcball.m_az);
-
-        if (!zero_arcball_angles)
-            m_camera.rotate(arcball.m_ax * rot_scale, arcball.m_ay * rot_scale, arcball.m_az * rot_scale);
-
-        //_camera.rotate(-dy * rot_scale, dx * rot_scale, 0);
+        vv_geom::quat q = get_arcball_quaternion(astate);
+        m_camera.apply_rotation(q);
     }
 
     if (al_key_down(&m_keyboard_state, ALLEGRO_KEY_MINUS))
@@ -515,15 +502,26 @@ void allegro_opengl_project::imgui_render()
     ImGui::Checkbox("wireframe", &draw_state_flags::m_wireframe);
     ImGui::Checkbox("compas", &draw_state_flags::m_compas);
     ImGui::Checkbox("coord system", &draw_state_flags::m_coord_sys);
-    float xa = m_camera.get_xa_radians();
-    float ya = m_camera.get_ya_radians();
-    float za = m_camera.get_za_radians();
-    ImGui::Text(u8"angle X"); ImGui::SameLine(); ImGui::SliderAngle("ax", &xa, -180.f, +180.f);
-    ImGui::Text(u8"angle Y"); ImGui::SameLine(); ImGui::SliderAngle("ay", &ya, -180.f, +180.f);
-    ImGui::Text(u8"angle Z"); ImGui::SameLine(); ImGui::SliderAngle("az", &za, -180.f, +180.f);
-    m_camera.set_xa(xa * 180 / std::acos(-1));
-    m_camera.set_ya(ya * 180 / std::acos(-1));
-    m_camera.set_za(za * 180 / std::acos(-1));
+
+    double xa = 0, ya = 0, za = 0;
+    auto quat = m_camera.get_quat();
+    if (nullptr != quat)
+        quat->convert_to_euler(xa, ya, za);
+    float fxa = (float)xa;
+    float fya = (float)ya;
+    float fza = (float)za;
+    ImGui::Text(u8"angle X"); ImGui::SameLine(); ImGui::SliderAngle("ax", &fxa, -180.f, +180.f);
+    ImGui::Text(u8"angle Y"); ImGui::SameLine(); ImGui::SliderAngle("ay", &fya, -180.f, +180.f);
+    ImGui::Text(u8"angle Z"); ImGui::SameLine(); ImGui::SliderAngle("az", &fza, -180.f, +180.f);
+
+    if (0 && nullptr != quat)
+    {
+        vv_geom::quat quat_inv(quat->w, -quat->x, -quat->y, -quat->z);
+        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({1.0, 0.0, 0.0}, fxa);
+        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({0.0, 1.0, 0.0}, fya);
+        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({0.0, 0.0, 1.0}, fza);
+        m_camera.apply_rotation(quat_inv);
+    }
 
     ImGui::ColorEdit3("bkgnd color", (float *)&clear_color);
 
@@ -577,9 +575,16 @@ void allegro_opengl_project::draw_compas()
     glLoadIdentity();
 
     glTranslated(m_w - compas_size, m_h - compas_size, 0);
-    glRotated(m_camera.get_xa(), 1, 0, 0);
-    glRotated(m_camera.get_ya(), 0, 1, 0);
-    glRotated(m_camera.get_za(), 0, 0, 1);
+
+    double xa = 0, ya = 0, za = 0;
+    auto quat = m_camera.get_quat();
+    if (nullptr != quat)
+	quat->convert_to_euler(xa, ya, za);
+
+    glRotated(xa * 180 / M_PI, 1, 0, 0);
+    glRotated(ya * 180 / M_PI, 0, 1, 0);
+    glRotated(za * 180 / M_PI, 0, 0, 1);
+
     glScaled(1, 1, 1);
 
     glLineWidth(3);
@@ -618,9 +623,9 @@ void allegro_opengl_project::draw_compas()
     al_identity_transform(&TRZ);
     al_identity_transform(&TS);
 
-    al_rotate_transform_3d(&TRX, 1, 0, 0, m_camera.get_xa_radians());
-    al_rotate_transform_3d(&TRY, 0, 1, 0, m_camera.get_ya_radians());
-    al_rotate_transform_3d(&TRZ, 0, 0, 1, m_camera.get_za_radians());
+    al_rotate_transform_3d(&TRX, 1, 0, 0, xa);
+    al_rotate_transform_3d(&TRY, 0, 1, 0, ya);
+    al_rotate_transform_3d(&TRZ, 0, 0, 1, za);
     al_translate_transform_3d(&TTX, 1, 0, 0);
     al_translate_transform_3d(&TTY, 0, 1, 0);
     al_translate_transform_3d(&TTZ, 0, 0, 1);
@@ -720,79 +725,51 @@ void allegro_opengl_project::draw_coord_system()
     glPopMatrix();
 }
 
-allegro_opengl_project::arcball_angles_struct allegro_opengl_project::get_arcball_angles(const arcball_state_struct &astate)
+vv_geom::quat allegro_opengl_project::get_arcball_quaternion(const arcball_state_struct &astate)
 {
-    arcball_angles_struct result;
-
-    if (astate.m_x1 > m_w || astate.m_x2 > m_w ||
+ if (astate.m_x1 > m_w || astate.m_x2 > m_w ||
             astate.m_y1 > m_h || astate.m_y2 > m_h)
-        return result;
+     return vv_geom::quat();
 
     if (astate.m_x1 < 0. || astate.m_x2 < 0. ||
             astate.m_y1 < 0. || astate.m_y2 < 0.)
-        return result;
+        return vv_geom::quat();
 
     if (vv_is_zero(astate.m_x1 - astate.m_x2) &&
             vv_is_zero(astate.m_y1 - astate.m_y2))
-        return result;
+        return vv_geom::quat();
 
-    double px1 =  (astate.m_x1 - m_w/2);
-    double py1 =  (astate.m_y1 - m_h/2);
+    double px1 = (astate.m_x1 - m_w/2);
+    double py1 = (astate.m_y1 - m_h/2);
 
-    double px2 =  (astate.m_x2 - m_w/2);
-    double py2 =  (astate.m_y2 - m_h/2);
+    double px2 = (astate.m_x2 - m_w/2);
+    double py2 = (astate.m_y2 - m_h/2);
 
     double r_p1 = sqrt(px1*px1 + py1*py1);
     double r_p2 = sqrt(px2*px2 + py2*py2);
 
     if (vv_is_zero(r_p1))
-        return result;
+        return vv_geom::quat();
 
-    double arcball_radius = 2 * std::max(m_w/2, m_h/2);//std::max(r_p1, r_p2);
+    double arcball_radius = 2 * std::max(m_w/2, m_h/2);
     arcball_radius = std::max(arcball_radius, r_p1);
     arcball_radius = std::max(arcball_radius, r_p2);
+    arcball_radius = std::max(r_p1, r_p2);
 
     double pz1 = sqrt(pow(arcball_radius, 2) - r_p1*r_p1);
     double pz2 = sqrt(pow(arcball_radius, 2) - r_p2*r_p2);
 
-    double dx = px2 - px1;
-    double dy = py2 - py1;
-    double dz = pz2 - pz1;
-
     vv_geom::vec3 v1 = {px1, py1, pz1};
     vv_geom::vec3 v2 = {px2, py2, pz2};
 
-    vv_geom::vec3 vdir = v2 - v1;
-    vv_geom::vec3 vnorm = vv_geom::cross_product(v1, vdir);
+    v1.normalize();
+    v2.normalize();
 
-    double dxy = sqrt(dx * dx + dy * dy);
-    double dxz = sqrt(dx * dx + dz * dz);
-    double dyz = sqrt(dy * dy + dz * dz);
+    vv_geom::quat q = vv_geom::quat::from_vectors(v2, v1);
+    q.normalize();
 
-    const double sign_x = vnorm.x > 0 ? -1 : 1;
-    const double sign_y = vnorm.y > 0 ? 1 : -1;
-    const double sign_z = vnorm.z > 0 ? 1 : -1;
-
-    const double rot_scale = 8.;
-
-    double ryz1 = sqrt(py1 * py1 + pz1 * pz1);
-    double ryz2 = sqrt(py2 * py2 + pz2 * pz2);
-    double ax2 = (ryz1 * ryz1 + ryz2 * ryz2 - dyz * dyz) / (2 * ryz1 * ryz2);
-    result.m_ax = rot_scale * sign_x * acos(ax2) * 180 / 3.14;
-
-    double rxz1 = sqrt(px1 * px1 + pz1 * pz1);
-    double rxz2 = sqrt(px2 * px2 + pz2 * pz2);
-    double ay2 = (rxz1 * rxz1 + rxz2 * rxz2 - dxz * dxz) / (2 * rxz1 * rxz2);
-    result.m_ay = rot_scale * sign_y * acos(ay2) * 180 / 3.14;
-
-    double rxy1 = sqrt(px1 * px1 + py1 * py1);
-    double rxy2 = sqrt(px2 * px2 + py2 * py2);
-    double az2 = (rxy1 * rxy1 + rxy2 * rxy2 - dxy * dxy) / (2 * rxy1 * rxy2);
-    result.m_az = -sign_z * acos(az2) * 180 / 3.14;
-
-    return result;
+    return q;
 }
-
 
 //  allegro_opengl_project::transformation implementation ///////////////////////////
 
@@ -812,9 +789,10 @@ void allegro_opengl_project::camera_frame::reset()
     m_xs = 1;
     m_ys = 1;
     m_zs = 1;
-    m_xa = 0;
-    m_ya = 0;
-    m_za = 0;
+    if (nullptr == m_rotation)
+        m_rotation = new vv_geom::quat();
+    else
+        *m_rotation = vv_geom::quat();
     m_x = 0;
     m_y = 0;
     m_z = 0;
@@ -845,55 +823,35 @@ void allegro_opengl_project::camera_frame::scale(double xs, double ys, double zs
     m_zs = (absolute ? 0 : m_zs) + zs;
     m_changed_scale = true;
 }
-void allegro_opengl_project::camera_frame::rotate(double xa, double ya, double za, bool absolute)
-{
-    m_xa = (absolute ? 0 : m_xa) + xa;
-    m_ya = (absolute ? 0 : m_ya) + ya;
-    m_za = (absolute ? 0 : m_za) + za;
-    if (m_xa >= 360)
-        m_xa -= 360;
-    if (m_ya >= 360)
-        m_ya -= 360;
-    if (m_za >= 360)
-        m_za -= 360;
-    m_changed_rotation = true;
-}
+
 void allegro_opengl_project::camera_frame::translate(double x, double y, double z, bool absolute)
 {
-
     m_x = (absolute ? 0 : m_x) + x;
     m_y = (absolute ? 0 : m_y) + y;
     m_z = (absolute ? 0 : m_z) + z;
     m_changed_translation = true;
 }
 
-// void allegro_opengl_project::camera_frame::apply()
-// {
-//   if (!_init) throw "camera is not initialized";
-//   reset_projection();
-//   if (_changed_translation)
-//     glTranslated(_x, _y, _z);
-//   if (_changed_rotation)
-//     {
-//       glRotated(_xa, 1, 0, 0);
-//       glRotated(_ya, 0, 1, 0);
-//       glRotated(_za, 0, 0, 1);
-//     }
-//   if (_changed_scale)
-//       glScaled(_xs, _ys, _zs);
-//   _changed_scale = false;
-//   _changed_rotation = false;
-//   _changed_translation = false;
-// }
+void allegro_opengl_project::camera_frame::apply_rotation(const vv_geom::quat& q)
+{
+    if (nullptr == m_rotation)
+        m_rotation = new vv_geom::quat();
+    *m_rotation = *m_rotation * q;
+    m_rotation->normalize();
+    m_changed_rotation = true;
+}
 
 void allegro_opengl_project::camera_frame::debug_info(int x, int y)
 {
     const auto font  = allegro_opengl_project::get_system_font();
     const auto color = al_map_rgb(0, 200, 0);
 
-    al_draw_textf(font, color, x, y, ALLEGRO_ALIGN_RIGHT, "%f", get_xa());
-    al_draw_textf(font, color, x, y + 10, ALLEGRO_ALIGN_RIGHT, "%f", get_ya());
-    al_draw_textf(font, color, x, y + 20, ALLEGRO_ALIGN_RIGHT, "%f", get_za());
+    double xa = 0, ya = 0, za = 0;
+    if (nullptr != m_rotation)
+        m_rotation->convert_to_euler(xa, ya, za);
+    al_draw_textf(font, color, x, y, ALLEGRO_ALIGN_RIGHT, "%f", xa);
+    al_draw_textf(font, color, x, y + 10, ALLEGRO_ALIGN_RIGHT, "%f", ya);
+    al_draw_textf(font, color, x, y + 20, ALLEGRO_ALIGN_RIGHT, "%f", za);
 }
 
 void allegro_opengl_project::camera_frame::update()
@@ -905,9 +863,12 @@ void allegro_opengl_project::camera_frame::update()
 
     glTranslated(m_x, m_y, m_z);
 
-    glRotated(m_xa, 1, 0, 0);
-    glRotated(m_ya, 0, 1, 0);
-    glRotated(m_za, 0, 0, 1);
+    double rotation_matrix[16];
+    if (nullptr != m_rotation)
+    {
+        m_rotation->to_rotation_matrix(rotation_matrix);
+        glMultMatrixd(rotation_matrix);
+    }
 
     glScaled(m_xs, m_ys, m_zs);
     m_changed_scale = false;
@@ -930,18 +891,4 @@ double allegro_opengl_project::camera_frame::get_z()
     return m_z;
 }
 
-float allegro_opengl_project::camera_frame::get_xa_radians()
-{
-    return m_xa * std::acos(-1) / 180;
-}
-
-float allegro_opengl_project::camera_frame::get_ya_radians()
-{
-    return m_ya * std::acos(-1) / 180;
-}
-
-float allegro_opengl_project::camera_frame::get_za_radians()
-{
-    return m_za * std::acos(-1) / 180;
-}
 #endif

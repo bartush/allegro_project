@@ -1,6 +1,5 @@
 #include <iostream>
 #include <algorithm>
-#include <cmath>
 
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_opengl.h>
@@ -45,6 +44,7 @@ protected:
 };
 
 #ifdef ALLEGRO_PROJECT_OPENGL
+namespace vv_geom{ struct quat;}
 class allegro_opengl_project : public allegro_project
 {
 public:
@@ -76,13 +76,8 @@ public:
         double m_x2 = .0;
         double m_y2 = .0;
     };
-    struct arcball_angles_struct
-    {
-        double m_ax = .0;
-        double m_ay = .0;
-        double m_az = .0;
-    };
-    arcball_angles_struct get_arcball_angles(const arcball_state_struct &astate);
+
+    vv_geom::quat get_arcball_quaternion(const arcball_state_struct &astate);
 
     class camera_frame
     {
@@ -91,41 +86,25 @@ public:
         void reset();
         void reset_projection();
         void scale(double dxs, double dxy, double dxz, bool absolute = false);
-        void rotate(double dxa, double dya, double dza, bool absolute = false);
         void translate(double dx, double dy, double dz, bool absolute = false);
-        //void apply();
+        void apply_rotation(const vv_geom::quat& q);
         void update();
-
         void debug_info(int x, int y);
-
         double get_x();
         double get_y();
         double get_z();
-
-        double get_xa()const {return m_xa;}
-        double get_ya()const {return m_ya;}
-        double get_za()const {return m_za;}
-
-        float get_xa_radians();
-        float get_ya_radians();
-        float get_za_radians();
-
-        void set_xa(double xa) {m_xa = xa;}
-        void set_ya(double ya) {m_ya = ya;}
-        void set_za(double za) {m_za = za;}
+	const vv_geom::quat* get_quat() {return m_rotation;}
 
     protected:
         bool m_init = false;
-
         double m_x  = 0;
         double m_y  = 0;
         double m_z  = 0;
-        double m_xa = 0;
-        double m_ya = 0;
-        double m_za = 0;
         double m_xs = 1;
         double m_ys = 1;
         double m_zs = 1;
+	vv_geom::quat* m_rotation = nullptr;
+
         bool m_changed_translation = false;
         bool m_changed_rotation    = false;
         bool m_changed_scale       = false;
@@ -148,5 +127,5 @@ protected:
 
 #define BEGIN_EXCEPTION_CATCH()  try {
 
-#define END_EXCEPTION_CATCH() } catch(const char* ex) \
-				  { std::cout << "exception: " << ex << std::endl; }
+#define END_EXCEPTION_CATCH() } catch(const char* ex)			\
+				{ std::cout << "exception: " << ex << std::endl; }
