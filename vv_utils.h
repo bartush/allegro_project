@@ -76,7 +76,9 @@ namespace vv_geom
     // Quaternion struct
     struct quat
     {
-	double w, x, y, z;
+	double w,    //cosine of half the rotation angle
+	    x, y, z; //unit vector scaled by sine of half the angle
+
     quat() : w(1.0), x(.0), y(.0), z(.0) {}
     quat(double w, double x, double y, double z) : w(w), x(x), y(y), z(z) {}
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 
 project(allegro_project)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_LIST_DIR})
@@ -12,7 +12,7 @@ set(SOURCES allegro_project.cpp test.cpp
     $ENV{IMGUI_FOLDER}/imgui_widgets.cpp)
 
 #set(ALLEGRO_PROJECT_LIBS -lGL -lGLU -lallegro /usr/lib/x86_64-linux-gnu/liballegro_font.so /usr/lib/x86_64-linux-gnu/liballegro_ttf.so /usr/lib/x86_64-linux-gnu/liballegro_primitives.so /usr/lib/x86_64-linux-gnu/liballegro_color.so /usr/lib/x86_64-linux-gnu/liballegro_image.so)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -mwindows -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -mwindows -O0 -g")
 #set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_color -lallegro_image)
 set(ALLEGRO_PROJECT_LIBS -lopengl32 -lglu32 -lallegro_monolith)
 add_executable(${PROJECT_NAME} ${SOURCES})
