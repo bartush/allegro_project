@@ -503,25 +503,18 @@ void allegro_opengl_project::imgui_render()
     ImGui::Checkbox("compas", &draw_state_flags::m_compas);
     ImGui::Checkbox("coord system", &draw_state_flags::m_coord_sys);
 
-    double xa = 0, ya = 0, za = 0;
-    auto quat = m_camera.get_quat();
-    if (nullptr != quat)
-        quat->convert_to_euler(xa, ya, za);
-    float fxa = (float)xa;
-    float fya = (float)ya;
-    float fza = (float)za;
-    ImGui::Text(u8"angle X"); ImGui::SameLine(); ImGui::SliderAngle("ax", &fxa, -180.f, +180.f);
-    ImGui::Text(u8"angle Y"); ImGui::SameLine(); ImGui::SliderAngle("ay", &fya, -180.f, +180.f);
-    ImGui::Text(u8"angle Z"); ImGui::SameLine(); ImGui::SliderAngle("az", &fza, -180.f, +180.f);
-
-    if (0 && nullptr != quat)
-    {
-        vv_geom::quat quat_inv(quat->w, -quat->x, -quat->y, -quat->z);
-        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({1.0, 0.0, 0.0}, fxa);
-        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({0.0, 1.0, 0.0}, fya);
-        quat_inv = quat_inv * vv_geom::quat::from_axis_angle({0.0, 0.0, 1.0}, fza);
-        m_camera.apply_rotation(quat_inv);
-    }
+    auto quat = m_camera.get_quat() ? * m_camera.get_quat() : vv_geom::quat();
+    float fx = (float)quat.x;
+    float fy = (float)quat.y;
+    float fz = (float)quat.z;
+    float fw = (float)quat.w;
+    ImGui::Text(u8"x"); ImGui::SameLine(); ImGui::SliderFloat("qx", &fx, -1.0f, +1.0f);
+    ImGui::Text(u8"y"); ImGui::SameLine(); ImGui::SliderFloat("qy", &fy, -1.0f, +1.0f);
+    ImGui::Text(u8"z"); ImGui::SameLine(); ImGui::SliderFloat("qz", &fz, -1.0f, +1.0f);
+    ImGui::Text(u8"w"); ImGui::SameLine(); ImGui::SliderFloat("qw", &fw, -1.0f, +1.0f);
+    vv_geom::quat new_quat(fw, fx, fy, fz);
+    new_quat.normalize();
+    //m_camera.apply_rotation(new_quat);
 
     ImGui::ColorEdit3("bkgnd color", (float *)&clear_color);
 
@@ -565,7 +558,6 @@ void allegro_opengl_project::draw_compas()
     //glDisable(GL_CULL_FACE);
     //glDisable(GL_TEXTURE_2D);
     //glDisable(GL_LIGHTING);
-
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     //glOrtho(0, m_w, m_h, 0, -compas_size, compas_size);
@@ -576,14 +568,10 @@ void allegro_opengl_project::draw_compas()
 
     glTranslated(m_w - compas_size, m_h - compas_size, 0);
 
-    double xa = 0, ya = 0, za = 0;
-    auto quat = m_camera.get_quat();
-    if (nullptr != quat)
-	quat->convert_to_euler(xa, ya, za);
-
-    glRotated(xa * 180 / M_PI, 1, 0, 0);
-    glRotated(ya * 180 / M_PI, 0, 1, 0);
-    glRotated(za * 180 / M_PI, 0, 0, 1);
+    auto quat = m_camera.get_quat() ? * m_camera.get_quat() : vv_geom::quat();
+    double rotation_matrix[16];
+    quat.to_rotation_matrix(rotation_matrix);
+    glMultMatrixd(rotation_matrix);
 
     glScaled(1, 1, 1);
 
@@ -610,87 +598,31 @@ void allegro_opengl_project::draw_compas()
     glDisable(GL_DEPTH_TEST);
     glPopMatrix();
 
-    //draw axes labels
-    ALLEGRO_TRANSFORM TX, TY, TZ, TTX, TTY, TTZ, TRX, TRY, TRZ, TS;
-    al_identity_transform(&TX);
-    al_identity_transform(&TY);
-    al_identity_transform(&TZ);
-    al_identity_transform(&TTX);
-    al_identity_transform(&TTY);
-    al_identity_transform(&TTZ);
-    al_identity_transform(&TRX);
-    al_identity_transform(&TRY);
-    al_identity_transform(&TRZ);
-    al_identity_transform(&TS);
-
-    al_rotate_transform_3d(&TRX, 1, 0, 0, xa);
-    al_rotate_transform_3d(&TRY, 0, 1, 0, ya);
-    al_rotate_transform_3d(&TRZ, 0, 0, 1, za);
-    al_translate_transform_3d(&TTX, 1, 0, 0);
-    al_translate_transform_3d(&TTY, 0, 1, 0);
-    al_translate_transform_3d(&TTZ, 0, 0, 1);
-    al_scale_transform_3d(&TS,
-                          axis_length + text_offset,
-                          axis_length + text_offset,
-                          axis_length + text_offset);
-
-    al_compose_transform(&TX, &TTX);
-    al_compose_transform(&TX, &TS);
-    al_compose_transform(&TX, &TRZ);
-    al_compose_transform(&TX, &TRY);
-    al_compose_transform(&TX, &TRX);
-
-    al_compose_transform(&TY, &TTY);
-    al_compose_transform(&TY, &TS);
-    al_compose_transform(&TY, &TRZ);
-    al_compose_transform(&TY, &TRY);
-    al_compose_transform(&TY, &TRX);
-
-    al_compose_transform(&TZ, &TTZ);
-    al_compose_transform(&TZ, &TS);
-    al_compose_transform(&TZ, &TRZ);
-    al_compose_transform(&TZ, &TRY);
-    al_compose_transform(&TZ, &TRX);
-
-    ALLEGRO_VERTEX x_label, y_label, z_label;
-
-    x_label.x = 0;
-    x_label.y = 0;
-    x_label.z = 0;
-
-    y_label.x = 0;
-    y_label.y = 0;
-    y_label.z = 0;
-
-    z_label.x = 0;
-    z_label.y = 0;
-    z_label.z = 0;
-
-    al_transform_coordinates_3d(&TX, &x_label.x, &x_label.y, &x_label.z);
-    al_transform_coordinates_3d(&TY, &y_label.x, &y_label.y, &y_label.z);
-    al_transform_coordinates_3d(&TZ, &z_label.x, &z_label.y, &z_label.z);
-
+    // Draw axes labels
+    vv_geom::vec3 x_axis = vv_geom::rotate_vector(vv_geom::vec3(axis_length + text_offset, 0, 0), quat);
+    vv_geom::vec3 y_axis = vv_geom::rotate_vector(vv_geom::vec3(0, axis_length + text_offset, 0), quat);
+    vv_geom::vec3 z_axis = vv_geom::rotate_vector(vv_geom::vec3(0, 0, axis_length + text_offset), quat);
 
     al_draw_textf(m_system_font,
-                  al_map_rgb(100, 0, 100),
-                  m_w - compas_size + x_label.x,  // x coord
-                  compas_size - x_label.y, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%s", "X");
+		  al_map_rgb(100, 0, 100),
+		  m_w - compas_size + x_axis.x,  // x coord
+		  compas_size - x_axis.y,       // y coord
+		  ALLEGRO_ALIGN_LEFT,
+		  "%s", "X");
 
     al_draw_textf(m_system_font,
-                  al_map_rgb(100, 100, 0),
-                  m_w - compas_size + y_label.x,  // x coord
-                  compas_size - y_label.y, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%s", "Y");
+		  al_map_rgb(100, 100, 0),
+		  m_w - compas_size + y_axis.x,  // x coord
+		  compas_size - y_axis.y,       // y coord
+		  ALLEGRO_ALIGN_LEFT,
+		  "%s", "Y");
 
     al_draw_textf(m_system_font,
-                  al_map_rgb(0, 100, 100),
-                  m_w - compas_size + z_label.x,  // x coord
-                  compas_size - z_label.y, // y cord
-                  ALLEGRO_ALIGN_LEFT,
-                  "%s", "Z");
+		  al_map_rgb(0, 100, 100),
+		  m_w - compas_size + z_axis.x,  // x coord
+		  compas_size - z_axis.y,       // y coord
+		  ALLEGRO_ALIGN_LEFT,
+		  "%s", "Z");
 }
 
 void allegro_opengl_project::draw_coord_system()

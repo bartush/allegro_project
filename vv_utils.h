@@ -23,7 +23,10 @@ namespace vv_geom
         double y;
         double z;
 
-        vec3 operator+(const vec3& rhs)
+    vec3() : x(.0), y(.0), z(.0) {}
+    vec3(double x, double y, double z) : x(x), y(y), z(z) {}
+
+	vec3 operator+(const vec3& rhs)
 	    {
 		vec3 res;
 		res.x = x + rhs.x;
@@ -52,6 +55,11 @@ namespace vv_geom
 	    }
     };
 
+    double dot_product(const vec3& v1, const vec3& v2)
+    {
+        return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+    }
+
     void cross_product(const vec3& v1, const vec3& v2, vec3& res)
     {
         res.x = v1.y * v2.z - v1.z * v2.y;
@@ -66,11 +74,6 @@ namespace vv_geom
         res.y = v1.x * v2.z - v1.z * v2.x;
         res.z = v1.x * v2.y - v1.y * v2.x;
         return res;
-    }
-
-    double dot_product(const vec3& v1, const vec3& v2)
-    {
-        return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     }
 
     // Quaternion struct
@@ -253,5 +256,12 @@ namespace vv_geom
 		get_euler_from_matrix(matrix, xa, ya, za);
 	    }
     };
+
+    vec3 rotate_vector(const vec3& v, const quat& q) 
+    {
+	quat qv(0, v.x, v.y, v.z);
+	quat result = q * qv * q.inverse();
+	return vv_geom::vec3(result.x, result.y, result.z);
+    }
 }
 #endif
